@@ -13,7 +13,10 @@ import json
 import os
 import re
 import time
+import zipfile
+import xml.etree.ElementTree as ET
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -36,6 +39,55 @@ def _point(value, date, source, **extra):
         return None
     item = {"value": value, "date": date or "", "source": source}
     item.update(extra)
+    return item
+
+
+def _cn_month(label):
+    match = re.fullmatch(r"(\d{4})年(\d{1,2})月份", str(label).strip())
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def latest_m1_m2():
+    response = requests.get(
+        EM,
+        params={
+            "reportName": "RPT_ECONOMY_CURRENCY_SUPPLY",
+            "columns": "REPORT_DATE,TIME,CURRENCY_SAME,BASIC_CURRENCY_SAME",
+            "pageSize": "18",
+            "pageNumber": "1",
+            "sortColumns": "REPORT_DATE",
+            "sortTypes": "-1",
+            "source": "WEB",
+            "client": "WEB",
+        },
+        timeout=20,
+    )
+    rows = (response.json().get("result") or {}).get("data") or []
+    points = []
+    for row in rows:
+        stamp = _cn_month(row.get("TIME"))
+        m1 = row.get("CURRENCY_SAME")
+        m2 = row.get("BASIC_CURRENCY_SAME")
+        if stamp is None or m1 in (None, "") or m2 in (None, ""):
+            continue
+        points.append((stamp[0] * 12 + stamp[1], float(m1), float(m2), row.get("TIME") or ""))
+    if not points:
+        return None
+    points.sort(reverse=True)
+    index, m1, m2, label = points[0]
+    item = {
+        "spread": round(m1 - m2, 2),
+        "m1_yoy": m1,
+        "m2_yoy": m2,
+        "date": label,
+        "source": "东方财富",
+    }
+    prior = next((row for row in points if row[0] == index - 6), None)
+    if prior:
+        item["spread_6m"] = round(prior[1] - prior[2], 2)
+        item["date_6m"] = prior[3]
     return item
 
 
@@ -110,26 +162,154 @@ def latest_yields():
     return {}
 
 
-def latest_social():
-    response = requests.post(
-        "https://data.mofcom.gov.cn/datamofcom/front/gnmy/shrzgmQuery",
-        timeout=20,
-    )
-    rows = response.json() or []
-    parsed = []
-    for row in rows:
-        month = str(row.get("date") or "")
-        raw = row.get("tiosfs")
-        if not month or raw in (None, ""):
-            continue
-        parsed.append((month, float(raw)))
-    if not parsed:
+def _xlsx_column_rows(content):
+    """读央行 xlsx 的 A、B 列。月份有的是数字，10 月以后是文本。"""
+    def local(tag):
+        return tag.rsplit("}", 1)[-1]
+
+    with zipfile.ZipFile(io.BytesIO(content)) as book:
+        shared = []
+        if "xl/sharedStrings.xml" in book.namelist():
+            root = ET.fromstring(book.read("xl/sharedStrings.xml"))
+            for item in root.iter():
+                if local(item.tag) != "si":
+                    continue
+                shared.append("".join(node.text or "" for node in item.iter() if local(node.tag) == "t"))
+        sheet_name = next(name for name in book.namelist() if name.startswith("xl/worksheets/sheet"))
+        root = ET.fromstring(book.read(sheet_name))
+        rows = []
+        for row in root.iter():
+            if local(row.tag) != "row":
+                continue
+            values = {}
+            for cell in row:
+                if local(cell.tag) != "c":
+                    continue
+                ref = cell.get("r") or ""
+                column = "".join(ch for ch in ref if ch.isalpha())
+                kind = cell.get("t")
+                text = None
+                for node in cell.iter():
+                    if local(node.tag) == "v" and node.text is not None:
+                        text = node.text
+                        break
+                if text is None:
+                    continue
+                values[column] = shared[int(text)] if kind == "s" else text
+            if values:
+                rows.append(values)
+        return rows
+
+
+def _flow_month(raw, seen):
+    match = re.fullmatch(r"(\d{4})\.(\d{1,2})", str(raw).strip())
+    if not match:
         return None
-    month, value = max(parsed)
-    # 商务部这张表的单位是亿元。卡片按元再换算成亿。
-    yuan = value * 1e8 if abs(value) < 1e7 else value
-    label = f"{month[:4]}-{month[4:6]}" if len(month) >= 6 else month
-    return _point(yuan, label, "商务部")
+    year, token = int(match.group(1)), match.group(2)
+    month = int(token)
+    # Excel 把 10 月存成数字时会变成 2025.1。1 月已经出现过，这个 .1 就是 10 月。
+    if len(token) == 1 and month == 1 and f"{year:04d}-01" in seen:
+        month = 10
+    if year < 2000 or not 1 <= month <= 12:
+        return None
+    return f"{year:04d}-{month:02d}"
+
+
+def _pbc_page(url):
+    page = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=25)
+    if page.status_code != 200:
+        return ""
+    text = page.content.decode("utf-8", "replace")
+    if "社会融资" not in text and "统计数据" not in text:
+        text = page.content.decode("gbk", "replace")
+    return text
+
+
+def _pbc_url(href):
+    if href.startswith("http"):
+        return href
+    if href.startswith("/"):
+        return "https://www.pbc.gov.cn" + href
+    return "https://www.pbc.gov.cn/" + href
+
+
+def _flow_points_from_page(text):
+    start = text.find("社会融资规模增量统计表")
+    if start < 0:
+        return []
+    end = text.find("社会融资规模存量", start)
+    chunk = text[start:end if end > start else None]
+    match = re.search(r"""href=['"]([^'"]+\.xlsx)['"]""", chunk)
+    if not match:
+        return []
+    book = requests.get(_pbc_url(match.group(1)), headers={"User-Agent": "Mozilla/5.0"}, timeout=25)
+    book.raise_for_status()
+    points = []
+    seen = set()
+    for row in _xlsx_column_rows(book.content):
+        label = _flow_month(row.get("A"), seen)
+        raw = row.get("B")
+        if not label or raw in (None, ""):
+            continue
+        seen.add(label)
+        try:
+            value = float(str(raw).replace(",", ""))
+        except ValueError:
+            continue
+        points.append((label, value))
+    return points
+
+
+def _pbc_flow_points(year):
+    direct = _flow_points_from_page(_pbc_page(
+        f"https://www.pbc.gov.cn/diaochatongjisi/116219/116319/{year}ntjsj/shrzgm/index.html"
+    ))
+    if direct:
+        return direct
+    index = _pbc_page("https://www.pbc.gov.cn/diaochatongjisi/116219/116319/index.html")
+    year_link = re.search(
+        rf"""href=['"]([^'"]+)['"][^>]*>\s*{year}年统计数据""",
+        index,
+    )
+    if not year_link:
+        return []
+    year_page = _pbc_page(_pbc_url(year_link.group(1)))
+    social = re.search(r"""href=['"]([^'"]+)['"][^>]*>\s*社会融资规模""", year_page)
+    if not social:
+        return []
+    return _flow_points_from_page(_pbc_page(_pbc_url(social.group(1))))
+
+
+def _sum_through(points, year, month_num):
+    prefix = f"{year:04d}-"
+    chosen = {
+        int(label[5:7]): value
+        for label, value in points
+        if label.startswith(prefix) and 1 <= int(label[5:7]) <= month_num
+    }
+    if set(range(1, month_num + 1)) - set(chosen):
+        return None
+    return sum(chosen.values())
+
+
+def latest_social():
+    year = datetime.now().year
+    points = _pbc_flow_points(year) or _pbc_flow_points(year - 1)
+    if not points:
+        return None
+    month, value = points[-1]
+    data_year = int(month[:4])
+    month_num = int(month[5:7])
+    prior_points = _pbc_flow_points(data_year - 1)
+    extra = {}
+    ytd = _sum_through(points, data_year, month_num)
+    ytd_prev = _sum_through(prior_points, data_year - 1, month_num)
+    if ytd is not None:
+        extra["ytd"] = ytd * 1e8
+    if ytd_prev is not None:
+        extra["ytd_last_year"] = ytd_prev * 1e8
+    # 央行表单位是亿元。卡片按元再换算成亿。
+    return _point(value * 1e8, month, "人民银行", **extra)
 
 
 def latest_caixin():
@@ -244,6 +424,26 @@ def latest_vix():
     last = response.text.strip().splitlines()[-1].split(",")
     month, day, year = last[0].split("/")
     return _point(round(float(last[4]), 2), f"{year}-{month}-{day}", "芝加哥期权交易所")
+
+
+def latest_move():
+    response = requests.get(
+        "https://query2.finance.yahoo.com/v8/finance/chart/%5EMOVE?interval=1d&range=10d",
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+    result = ((response.json().get("chart") or {}).get("result") or [None])[0] or {}
+    meta = result.get("meta") or {}
+    price = meta.get("regularMarketPrice")
+    stamp = meta.get("regularMarketTime")
+    if price in (None, "") or stamp in (None, ""):
+        return None
+    day = datetime.fromtimestamp(int(stamp), ZoneInfo("America/New_York")).date().isoformat()
+    return _point(round(float(price), 2), day, "雅虎财经")
 
 
 def latest_cn_vix():
@@ -428,19 +628,11 @@ def main():
             snapshot["china_core"][key] = None
 
     try:
-        m2 = em_latest("RPT_ECONOMY_CURRENCY_SUPPLY", "BASIC_CURRENCY_SAME")
-        m1 = em_latest("RPT_ECONOMY_CURRENCY_SUPPLY", "CURRENCY_SAME")
-        if m1 and m2:
-            snapshot["china_core"]["cn_m1_m2_spread"] = {
-                "spread": round(m1["value"] - m2["value"], 2),
-                "m1_yoy": m1["value"],
-                "m2_yoy": m2["value"],
-                "date": m2["date"] or m1["date"],
-                "source": "东方财富",
-            }
+        snapshot["china_core"]["cn_m1_m2_spread"] = latest_m1_m2()
         print("m1m2", snapshot["china_core"].get("cn_m1_m2_spread"))
     except Exception as exc:
         print(f"货币供应失败: {exc}")
+        snapshot["china_core"]["cn_m1_m2_spread"] = None
 
     try:
         yields = latest_yields()
@@ -459,6 +651,16 @@ def main():
                 previous = json.load(handle)
         except json.JSONDecodeError:
             previous = {}
+    if snapshot["china_core"].get("cn_social_financing") is None:
+        old = (previous.get("china_core") or {}).get("cn_social_financing")
+        if old:
+            snapshot["china_core"]["cn_social_financing"] = old
+            print(f"社融这次没取到，沿用 {old.get('date')}")
+    if snapshot["china_core"].get("cn_m1_m2_spread") is None:
+        old = (previous.get("china_core") or {}).get("cn_m1_m2_spread")
+        if old:
+            snapshot["china_core"]["cn_m1_m2_spread"] = old
+            print(f"剪刀差这次没取到，沿用 {old.get('date')}")
     try:
         quotes = latest_quotes()
     except Exception as exc:
@@ -495,6 +697,14 @@ def main():
         print("vix", snapshot["risk_monitor"]["vix"])
     except Exception as exc:
         print(f"VIX 失败: {exc}")
+    snapshot["risk_monitor"]["move_idx"] = (previous.get("risk_monitor") or {}).get("move_idx")
+    try:
+        point = latest_move()
+        if point:
+            snapshot["risk_monitor"]["move_idx"] = point
+        print("move", snapshot["risk_monitor"]["move_idx"])
+    except Exception as exc:
+        print(f"MOVE 失败: {exc}")
     snapshot["risk_monitor"]["cn_vix"] = (previous.get("risk_monitor") or {}).get("cn_vix")
     try:
         snapshot["risk_monitor"]["cn_vix"] = latest_cn_vix()

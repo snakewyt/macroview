@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchBullLiquidity, fetchDashboard } from '../api/macroApi';
+import { fetchBullLiquidity, fetchDashboard, scissorsView } from '../api/macroApi';
 import BullLiquidity from './BullLiquidity';
 import VIXChart from './VIXChart';
 import '../styles/dashboard.css';
@@ -9,11 +9,11 @@ const FIELD_EXPLANATIONS = {
   // === 中国内核模块 ===
   '官方制造业PMI': '经济体温计。>50=经济在扩张（发热），<50=在收缩（发冷）。每月第一个公布，最领先指标。',
   '财新制造业PMI': '中小企业+出口景气度。与官方PMI背离时需警惕（可能反映结构分化）。',
-  'M1-M2剪刀差': '企业花钱意愿指数。收窄=企业敢花钱，经济变好；走阔=企业躺平，经济萎靡。',
+  'M1-M2剪刀差': '企业花钱意愿。拿最新月和六个月前比，变动不到 0.5 个百分点算持平。收窄=企业敢花钱，走阔=花钱变慢。',
   'CPI同比': '物价涨速。<1%=通缩（东西太便宜），>3%=通胀（东西太贵），1-2%最舒服。',
   'PPI同比': '工厂产品卖得好不好。负值=打折也卖不动（利润承压），正值=能涨价（利润改善）。',
   'LPR (1年)': '企业贷款基准利率。下调=宽松（利好），上调=收紧（利空）。',
-  '社融增量': '实体经济拿到多少资金。回升=信用扩张（利好），回落=借不到钱（利空）。',
+  '社融增量': '当月实体经济拿到的资金。单月随季节起伏很大，结论看今年1月到当月的累计，和去年同一段比。累计少=信用偏慢。',
   '北向资金': '外资买卖A股的金额。持续流入=外资看好，持续流出=外资撤退。',
 
   // === 全球宏观模块 ===
@@ -44,7 +44,7 @@ const FIELD_EXPLANATIONS = {
 
   // === 波动率与风险模块 ===
   'VIX恐慌指数': '全球心跳。VIX>25=市场恐慌（利空），<15=过度自满（警惕变盘）。',
-  'MOVE指数': '债市恐慌温度。急升=债券市场剧烈波动，预示更大风险。',
+  'MOVE指数': '美债波动率偏高时，美债价格和收益率在晃，折现率不稳。长久期资产、成长股和信用债更敏感，资金更偏向短债和现金。>=120 债市很慌，>=100 波动偏高，80 到 100 正常，<80 很平静。这条不进 5 因子仓位。',
   '高收益债利差': '美国高收益债相对国债的利差。>600bp=信用危险，<450bp=信用不紧。',
   'TED利差': '原版是3个月LIBOR减国库券，2022年已停更。这里用90天金融商业票据减13周国债。升高=银行间资金变紧。',
   'A股VIX': '50ETF期权波动率。>35=恐慌抛售，<15=过于平静。交易所不再发布 iVIX，这是公开日频里的替代。',
@@ -83,17 +83,21 @@ function readout(title, value, item) {
     return number < 0 ? { text: '工业承压', tone: 'bad' } : { text: '工厂端在涨价', tone: 'good' };
   }
   if (title === 'M1-M2剪刀差') {
-    if (!hasNumber) return { text: '缺数据', tone: 'missing' };
-    if (number > -3) return { text: '差距不大', tone: 'neutral' };
-    if (number > -8) return { text: '企业花钱偏慢', tone: 'bad' };
-    return { text: '剪刀差很宽', tone: 'bad' };
+    const view = scissorsView(item);
+    return { text: view.text, tone: view.tone };
   }
   if (title === 'LPR (1年)') {
     if (!hasNumber) return { text: '缺数据', tone: 'missing' };
     return number <= 3.5 ? { text: '利率仍低', tone: 'good' } : { text: '利率偏高', tone: 'bad' };
   }
   if (title === '社融增量') {
-    return { text: '看不了当月', tone: 'missing' };
+    if (!hasNumber) return { text: '缺数据', tone: 'missing' };
+    const ytd = item?.ytd;
+    const prior = item?.ytd_last_year;
+    if (ytd == null || prior == null) return { text: '已公布', tone: 'neutral' };
+    if (ytd < prior) return { text: '今年累计偏少', tone: 'bad' };
+    if (ytd > prior) return { text: '今年累计偏多', tone: 'good' };
+    return { text: '今年累计相当', tone: 'neutral' };
   }
   if (title === '北向资金') return { text: '已经停更', tone: 'missing' };
   if (title === '联邦基金利率') {
@@ -161,7 +165,16 @@ function readout(title, value, item) {
     if (number < 15) return { text: '波动很低', tone: 'neutral' };
     return { text: '波动正常', tone: 'good' };
   }
-  if (title === 'MOVE指数') return { text: '旧数，不下结论', tone: 'missing' };
+  if (title === 'MOVE指数') {
+    if (!hasNumber) return { text: '这次没有取到', tone: 'missing' };
+    const day = Date.parse(`${item?.date || ''}T00:00:00`);
+    if (!item?.date || Number.isNaN(day)) return { text: '无新数', tone: 'missing' };
+    if ((Date.now() - day) / 86400000 > 5) return { text: '旧数，不下结论', tone: 'missing' };
+    if (number >= 120) return { text: '债市很慌', tone: 'bad' };
+    if (number >= 100) return { text: '债市波动偏高', tone: 'bad' };
+    if (number >= 80) return { text: '债市波动正常', tone: 'neutral' };
+    return { text: '债市很平静', tone: 'good' };
+  }
   if (title === '高收益债利差') {
     if (!hasNumber) return { text: '这次没有取到', tone: 'missing' };
     if (number > 600) return { text: '信用危险', tone: 'bad' };
@@ -379,7 +392,7 @@ export default function Dashboard() {
       </div>
       <div className="grid-4">
         <MetricCard title="LPR (1年)" value={china_core.cn_lpr_1y?.value} unit="%" item={china_core.cn_lpr_1y} />
-        <MetricCard title="社融增量" value={china_core.cn_social_financing?.value ? (china_core.cn_social_financing.value / 1e8).toFixed(0) : '--'} unit="亿" item={china_core.cn_social_financing} />
+        <MetricCard title="社融增量" value={china_core.cn_social_financing?.value != null ? (china_core.cn_social_financing.value / 1e8).toFixed(0) : '--'} unit="亿" item={china_core.cn_social_financing} />
         <MetricCard title="财新制造业PMI" value={china_core.cn_pmi_caixin?.value} item={china_core.cn_pmi_caixin} />
       </div>
       <div className="grid-4">
@@ -463,7 +476,7 @@ export default function Dashboard() {
       </div>
       <div className="grid-4">
         <MetricCard title="VIX恐慌指数" value={risk_monitor.vix?.value?.toFixed(2)} item={risk_monitor.vix} />
-        <MetricCard title="MOVE指数" value={risk_monitor.move_idx?.value?.toFixed(2)} />
+        <MetricCard title="MOVE指数" value={risk_monitor.move_idx?.value?.toFixed(2)} item={risk_monitor.move_idx} />
         <MetricCard title="高收益债利差" value={risk_monitor.hy_spread_oas?.value?.toFixed(0)} unit="bp" item={risk_monitor.hy_spread_oas} />
         <MetricCard title="A股VIX" value={risk_monitor.cn_vix?.value?.toFixed(2)} item={risk_monitor.cn_vix} />
       </div>

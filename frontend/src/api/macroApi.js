@@ -93,11 +93,26 @@ async function overlayLiveData(dashboard) {
   return { ...next, overview: buildOverview(next) };
 }
 
+export function scissorsView(item) {
+  const latest = Number(item?.spread);
+  const prior = Number(item?.spread_6m);
+  if (!Number.isFinite(latest)) return { signal: null, text: '缺数据', tone: 'missing', driver: null };
+  if (!Number.isFinite(prior)) return { signal: 0, text: '已公布', tone: 'neutral', driver: '剪刀差方向不明' };
+  const delta = latest - prior;
+  if (delta >= 0.5 && latest > -3) return { signal: 2, text: '近半年在收窄', tone: 'good', driver: '剪刀差在收窄' };
+  if (delta >= 0.5) return { signal: 1, text: '仍宽，但在收窄', tone: 'good', driver: '剪刀差在收窄' };
+  if (delta <= -0.5 && latest <= -8) return { signal: -2, text: '近半年走得很宽', tone: 'bad', driver: '剪刀差在走阔' };
+  if (delta <= -0.5) return { signal: -1, text: '近半年在走阔', tone: 'bad', driver: '剪刀差在走阔' };
+  return { signal: 0, text: '近半年持平', tone: 'neutral', driver: '剪刀差持平' };
+}
+
 function buildOverview(data) {
   const cn = data.china_core?.cn_10y_yield?.value;
   const us = data.assets?.us_10y_yield?.value ?? data.global_macro?.us_10y_yield?.value;
   const spread = cn != null && us != null ? (cn - us) * 100 : null;
-  const scissors = data.china_core?.cn_m1_m2_spread?.spread;
+  const scissorsItem = data.china_core?.cn_m1_m2_spread;
+  const scissors = scissorsItem?.spread;
+  const scissorsRead = scissorsView(scissorsItem);
   const vix = data.risk_monitor?.vix?.value;
   const credit = data.risk_monitor?.hy_spread_oas?.value;
   const factors = [];
@@ -111,12 +126,7 @@ function buildOverview(data) {
     });
   }
   if (scissors != null) {
-    const signal = scissors <= -8 ? -1 : 0;
-    factors.push({
-      weight: 0.25,
-      signal,
-      text: signal < 0 ? '剪刀差很宽' : '剪刀差不大',
-    });
+    factors.push({ weight: 0.25, signal: scissorsRead.signal, text: scissorsRead.driver });
   }
   if (vix != null) {
     const signal = vix < 14 ? 2 : vix < 18 ? 1 : vix <= 22 ? 0 : vix <= 28 ? -1 : -2;
@@ -166,7 +176,12 @@ function buildOverview(data) {
   const parts = [];
   if (vix != null) parts.push(`VIX ${Number(vix).toFixed(2)}`);
   if (spread != null) parts.push(`中美利差 ${Math.round(spread)}bp`);
-  if (scissors != null) parts.push(`M1-M2 ${scissors}，方向不明，这条先记中性`);
+  if (scissors != null) {
+    const prior = scissorsItem?.spread_6m;
+    parts.push(prior == null
+      ? `M1-M2 ${scissors}，方向不明，这条先记中性`
+      : `M1-M2 ${scissors}，六个月前 ${prior}，${scissorsRead.text}`);
+  }
   if (credit != null) parts.push(`高收益债利差 ${Math.round(credit)}bp`);
   if (missing.length) parts.push(missing.join('，'));
   parts.push(`有数的因子合成后是${label}`);
@@ -300,7 +315,11 @@ function normalizeAssets(assets, fred) {
 function normalizeRiskMonitor(fred) {
   return {
     vix: { value: fred?.vix?.value, source: 'FRED' },
-    move_idx: { value: fred?.move_idx?.value, source: 'FRED' },
+    move_idx: {
+      value: fred?.move_idx?.value,
+      date: fred?.move_idx?.date || '',
+      source: fred?.move_idx?.source === 'YahooChart' ? '雅虎财经' : (fred?.move_idx?.source || ''),
+    },
     hy_spread_oas: { value: fred?.hy_spread_oas?.value, source: 'FRED' },
     ted_spread: { value: fred?.ted_spread?.value, source: 'FRED' },
     cn_vix: { value: fred?.cn_vix?.value, source: 'FRED' },
