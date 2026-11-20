@@ -1,0 +1,162 @@
+{
+  "updated_at": "2026-11-20T21:17:47",
+  "china_core": {
+    "cn_pmi_official": {
+      "value": 49.3,
+      "date": "2026年10月份",
+      "source": "东方财富"
+    },
+    "cn_cpi_yy": {
+      "value": 0.7,
+      "date": "2026年10月份",
+      "source": "东方财富"
+    },
+    "cn_ppi_yy": {
+      "value": 5.7,
+      "date": "2026年10月份",
+      "source": "东方财富"
+    },
+    "cn_lpr_1y": {
+      "value": 3.0,
+      "date": "2026-11-20",
+      "source": "中国货币网"
+    },
+    "cn_social_financing": {
+      "value": 624500000000.0,
+      "date": "2026-04",
+      "source": "商务部"
+    },
+    "cn_pmi_caixin": {
+      "value": 52.0,
+      "date": "2026-10-31",
+      "source": "财新"
+    },
+    "cn_m1_m2_spread": {
+      "spread": -2.7,
+      "m1_yoy": 4.4,
+      "m2_yoy": 7.1,
+      "date": "2026年10月份",
+      "source": "东方财富"
+    },
+    "cn_10y_yield": {
+      "value": 1.5755,
+      "date": "2026-11-19",
+      "source": "东方财富"
+    },
+    "cn_repo_gc001": {
+      "value": 1.395,
+      "date": "2026-11-20",
+      "source": "上交所"
+    }
+  },
+  "global_macro": {
+    "us_10y_yield": {
+      "value": 5.04,
+      "date": "2026-11-19",
+      "source": "东方财富"
+    },
+    "us_2y_yield": {
+      "value": 4.76,
+      "date": "2026-11-19",
+      "source": "东方财富"
+    },
+    "on_rrp_balance": {
+      "value": 405000000.0,
+      "date": "2026-11-19",
+      "source": "纽约联储"
+    },
+    "us_core_pce_yy": {
+      "value": 3.1,
+      "date": "2026-09",
+      "source": "美国商务部"
+    },
+    "fed_balance_sheet": {
+      "value": 6741452000000.0,
+      "date": "2026-11-18",
+      "source": "美联储",
+      "weekly_change": -17415000000.0
+    }
+  },
+  "fx_liquidity": {
+    "dxy_idx": {
+      "value": 103.65,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "usd_cnh": {
+      "value": 6.6805,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "usd_jpy": {
+      "value": 158.9085,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    }
+  },
+  "assets": {
+    "us_10y_yield": {
+      "value": 5.04,
+      "date": "2026-11-19",
+      "source": "东方财富"
+    },
+    "spx": {
+      "value": 7175.83,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "hs300": {
+      "value": 3954.57,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "hsi": {
+      "value": 22410.8,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "nk225": {
+      "value": 56436.65,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "gold_spot": {
+      "value": 3574.3,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "wti_oil": {
+      "value": 82.29,
+      "date": "2026-11-20",
+      "source": "东方财富"
+    },
+    "btc_usd": null,
+    "nasdaq": {
+      "value": 23879.2,
+      "date": "2026-11-20",
+      "source": "新浪财经"
+    }
+  },
+  "risk_monitor": {
+    "vix": {
+      "value": 28.44,
+      "date": "2026-11-19",
+      "source": "芝加哥期权交易所"
+    },
+    "cn_vix": {
+      "value": 14.8,
+      "date": "2026-11-18",
+      "source": "50ETF期权"
+    },
+    "hy_spread_oas": {
+      "value": 347.0,
+      "date": "2026-11-18",
+      "source": "ICE BofA"
+    },
+    "ted_spread": {
+      "value": -3.0,
+      "date": "2026-11-18",
+      "source": "美联储票据减国债"
+    }
+  }
+}
