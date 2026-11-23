@@ -1,0 +1,38 @@
+name: Update Macro Data
+
+on:
+  schedule:
+    # 北京时间每周一至周五 09:15 自动刷新
+    - cron: "15 1 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh snapshot and liquidity reports
+        run: python scripts/refresh_all.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/public_snapshot.json data/bull_liquidity.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(data): automated macro data refresh"
+            git push
+          fi

@@ -1,10 +1,22 @@
-import { useState, useEffect } from 'react';
-import { fetchBullLiquidity, fetchDashboard, scissorsView } from '../api/macroApi';
+import { useState, useEffect, useRef } from 'react';
+import { buildDailyBrief, fetchBullLiquidity, fetchDashboard, scissorsView } from '../api/macroApi';
+import BriefModal from './BriefModal';
 import BullLiquidity from './BullLiquidity';
+import FactorBreakdown from './FactorBreakdown';
 import VIXChart from './VIXChart';
 import '../styles/dashboard.css';
 
-// 指标解释数据（从 docs/页面指标解释.txt）
+const NAV_ITEMS = [
+  { id: 'sec-overview', label: '顶层概览' },
+  { id: 'sec-liquidity', label: 'A股流动性' },
+  { id: 'sec-china', label: '中国内核' },
+  { id: 'sec-global', label: '全球宏观' },
+  { id: 'sec-fx', label: '美元与流动性' },
+  { id: 'sec-assets', label: '全球资产' },
+  { id: 'sec-risk', label: '波动与风险' },
+];
+
+// 指标解释数据
 const FIELD_EXPLANATIONS = {
   // === 中国内核模块 ===
   '官方制造业PMI': '经济体温计。>50=经济在扩张（发热），<50=在收缩（发冷）。每月第一个公布，最领先指标。',
@@ -40,23 +52,17 @@ const FIELD_EXPLANATIONS = {
   'A股逆回购': '上交所 GC001，一天期国债逆回购利率。升高=场内隔夜资金变紧。',
   '纳斯达克': '美股成长股指数。涨=风险偏好高，跌=成长股承压。',
   '10Y美债收益率': '全球资产定价之锚。收益率上行=利率冲击（利空成长股）。',
+  '2Y美债收益率': '对美联储政策利率最敏感的短端国债收益率。',
   '10Y中债收益率': '人民币资产定价锚。与美债利差影响外资流向。',
 
   // === 波动率与风险模块 ===
-  'VIX恐慌指数': '全球心跳。VIX>25=市场恐慌（利空），<15=过度自满（警惕变盘）。',
+  'VIX恐慌指数': '全球心跳。VIX>25=市场恐慌（利空），<15=波动很低（警惕变盘）。',
   'MOVE指数': '美债波动率偏高时，美债价格和收益率在晃，折现率不稳。长久期资产、成长股和信用债更敏感，资金更偏向短债和现金。>=120 债市很慌，>=100 波动偏高，80 到 100 正常，<80 很平静。这条不进 5 因子仓位。',
   '高收益债利差': '美国高收益债相对国债的利差。>600bp=信用危险，<450bp=信用不紧。',
   'TED利差': '原版是3个月LIBOR减国库券，2022年已停更。这里用90天金融商业票据减13周国债。升高=银行间资金变紧。',
   'A股VIX': '50ETF期权波动率。>35=恐慌抛售，<15=过于平静。交易所不再发布 iVIX，这是公开日频里的替代。',
-
-  // === 顶层概览 ===
-  '全球风险偏好': '就像开车时的红绿灯。偏进攻=绿灯，偏防守=红灯，中性=黄灯。',
-  '置信度': '这个判断有多大的把握。置信度越高，越值得相信当前的信号。',
-  '权益仓位建议': '现在建议把多少比例的钱买股票。剩下的是债券/黄金/现金。',
-  '主要驱动因素': '今天市场上涨/下跌的主要原因。告诉你需要盯住什么因素。',
 };
 
-// 获取信号颜色和文字
 function readout(title, value, item) {
   const missing = value == null || value === '--' || value === '';
   const number = missing ? NaN : parseFloat(String(value).replace(/,/g, ''));
@@ -202,12 +208,41 @@ const getSignalInfo = (signal) => {
   return { class: 'signal-neutral', text: '中性', color: 'var(--yellow)' };
 };
 
-// 单个指标卡片（带 tooltip）
+// 单个指标卡片（支持点击外部/ESC 关闭 tooltip，自动防右侧溢出）
 function MetricCard({ title, value, unit = '', note, item, signal, explanation }) {
   const [showTip, setShowTip] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
+  const tipWrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!showTip) return undefined;
+    const handlePointerDown = (e) => {
+      if (tipWrapRef.current && !tipWrapRef.current.contains(e.target)) {
+        setShowTip(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowTip(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showTip]);
+
+  const toggleTip = () => {
+    if (!showTip && tipWrapRef.current) {
+      const rect = tipWrapRef.current.getBoundingClientRect();
+      setAlignRight(rect.left + 270 > window.innerWidth);
+    }
+    setShowTip((v) => !v);
+  };
+
   const reading = readout(title, value, item);
   const signalInfo = !reading && signal != null ? getSignalInfo(signal) : null;
-  const explanation_text = FIELD_EXPLANATIONS[title] || explanation || '';
+  const explanationText = FIELD_EXPLANATIONS[title] || explanation || '';
   const origin = reading?.tone === 'missing' && !item?.date
     ? ''
     : [item?.source, item?.date].filter(Boolean).join(' ');
@@ -217,24 +252,28 @@ function MetricCard({ title, value, unit = '', note, item, signal, explanation }
     <div className="card">
       <div className="title-row">
         <div className="title">{title}</div>
-        {explanation_text && (
-          <button
-            className="info-btn"
-            onClick={() => setShowTip(v => !v)}
-            aria-label={`查看${title}的解释`}
-          >
-            ❓
+        {explanationText && (
+          <div className="tip-wrap" ref={tipWrapRef}>
+            <button
+              type="button"
+              className={`info-btn${showTip ? ' active' : ''}`}
+              onClick={toggleTip}
+              aria-label={`查看${title}的解释`}
+              aria-expanded={showTip}
+            >
+              ?
+            </button>
             {showTip && (
-              <div className="tooltip" style={{ top: '100%', left: 0 }}>
-                {explanation_text}
+              <div className={`tooltip open${alignRight ? ' align-right' : ''}`} role="tooltip">
+                {explanationText}
               </div>
             )}
-          </button>
+          </div>
         )}
       </div>
       <div className="number">
         {value ?? '--'}
-        {unit && <span style={{ fontSize: 14, color: 'var(--text-dim)', marginLeft: 4 }}>{unit}</span>}
+        {unit && <span className="unit-inline">{unit}</span>}
       </div>
       {(reading || tail) && (
         <div className="note">
@@ -256,23 +295,35 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [bull, setBull] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
   const [error, setError] = useState(false);
 
-  const fetchAll = () => {
-    setLoading(true);
+  const fetchAll = (forceRefresh = false) => {
+    if (forceRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(false);
     fetchBullLiquidity().then(setBull).catch(() => setBull(null));
-    fetchDashboard()
-      .then(d => {
-        if (!d || !d.meta) { setError(true); return; }
+    fetchDashboard({ refresh: forceRefresh })
+      .then((d) => {
+        if (!d || !d.meta) {
+          setError(true);
+          return;
+        }
         setData(d);
         setError(false);
       })
       .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(false); }, []);
 
   if (loading) {
     return (
@@ -285,8 +336,8 @@ export default function Dashboard() {
   if ((error || !data) && !bull) {
     return (
       <div className="error-screen">
-        <p>数据加载失败，请检查网络或稍后重试</p>
-        <button className="retry-btn" onClick={fetchAll}>重新加载</button>
+        <p>数据加载失败，请确认后端接口已启动或稍后重试</p>
+        <button className="retry-btn" onClick={() => fetchAll(true)}>重新加载</button>
       </div>
     );
   }
@@ -300,51 +351,85 @@ export default function Dashboard() {
         <BullLiquidity report={bull} />
         <div className="error-screen">
           <p>其余宏观模块这次没有加载出来</p>
-          <button className="retry-btn" onClick={fetchAll}>重新加载</button>
+          <button className="retry-btn" onClick={() => fetchAll(true)}>重新加载</button>
         </div>
       </div>
     );
   }
 
-  const { overview = {}, china_core = {}, global_macro = {}, fx_liquidity = {}, assets = {}, risk_monitor = {}, meta = {} } = data;
+  const {
+    overview = {},
+    china_core = {},
+    global_macro = {},
+    fx_liquidity = {},
+    assets = {},
+    risk_monitor = {},
+    meta = {},
+  } = data;
+
   const riskClass = overview.bias === 'RISK_ON' ? 'risk-on' : overview.bias === 'RISK_OFF' ? 'risk-off' : 'neutral';
   const riskText = overview.bias === 'RISK_ON' ? '偏进攻' : overview.bias === 'RISK_OFF' ? '偏防守' : '中性';
 
+  const cn10yYield = china_core.cn_10y_yield?.value ?? null;
+  const us10yYield = assets.us_10y_yield?.value ?? global_macro.us_10y_yield?.value ?? null;
+  const cnUsSpread = fx_liquidity.cn_us_10y_spread?.value != null
+    ? Math.round(fx_liquidity.cn_us_10y_spread.value)
+    : (cn10yYield != null && us10yYield != null ? Math.round((cn10yYield - us10yYield) * 100) : null);
 
-  // 计算中美利差
-  const cn10yYield = china_core.cn_10y_yield?.value || 0;
-  const us10yYield = assets.us_10y_yield?.value || global_macro.us_10y_yield?.value || 0;
-  const cnUsSpread = (cn10yYield && us10yYield) ? ((cn10yYield - us10yYield) * 100).toFixed(0) : null;
+  const snapshotTime = meta.public_updated_at ? Date.parse(meta.public_updated_at) : NaN;
+  const snapshotDaysOld = Number.isNaN(snapshotTime) ? null : Math.floor((Date.now() - snapshotTime) / 86400000);
+  const isStale = snapshotDaysOld != null && snapshotDaysOld >= 4;
 
   return (
     <div className="dashboard">
       {/* 顶部标题栏 */}
       <div className="header">
         <h1>📊 宏观量化仪表盘 · 中国视角</h1>
-        <span className="update-time">
-          📅 {meta.data_date || '--'}
-        </span>
+        <div className="header-actions">
+          <span className={`update-time${isStale ? ' stale' : ''}`}>
+            📅 {meta.data_date || '--'}
+            {isStale ? `（快照已距今 ${snapshotDaysOld} 天）` : ''}
+          </span>
+          <button type="button" className="action-btn" onClick={() => setBriefOpen(true)}>
+            今日简报
+          </button>
+          <button
+            type="button"
+            className="action-btn"
+            onClick={() => fetchAll(true)}
+            disabled={refreshing}
+          >
+            {refreshing ? '刷新中…' : '刷新数据'}
+          </button>
+        </div>
       </div>
 
+      {/* 顶部快捷锚点导航 */}
+      <nav className="section-nav" aria-label="模块导航">
+        {NAV_ITEMS.map((item) => (
+          <a key={item.id} href={`#${item.id}`} className="section-nav-pill">
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
       {/* ========== 一、顶层概览 ========== */}
-      <div className="section-title" style={{ marginTop: 0 }}>
+      <div id="sec-overview" className="section-title" style={{ marginTop: 0 }}>
         📋 一、顶层概览
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 8 }}>
-          — 仪表盘的「结论区」，告诉你现在该怎么办
-        </span>
+        <span className="section-note">— 仪表盘的「结论区」，告诉你现在该怎么办</span>
       </div>
       <div className="top-level">
-        {/* 风险偏好 */}
         <div className="risk-card">
           <div className="label">🌍 全球风险偏好 <span style={{ fontSize: 11, opacity: 0.7 }}>（信号灯）</span></div>
           <div className={`value ${riskClass}`}>{riskText}</div>
-          <div className="sub">置信度 {overview.confidence ?? '--'}% · {overview.confidence ? '按有数因子' : '因子不足'}</div>
+          <div className="sub">
+            总分 {overview.score ?? '--'} · 置信度 {overview.confidence ?? '--'}%
+          </div>
           <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
             VIX {risk_monitor.vix?.value?.toFixed(2) || '--'} · MOVE {risk_monitor.move_idx?.date ? risk_monitor.move_idx.value?.toFixed(2) : '无新数'}
           </div>
         </div>
 
-        {/* 主要驱动因素 */}
         <div className="driver-card">
           <div className="label">⚡ 主要驱动因素 <span style={{ fontSize: 11, opacity: 0.7 }}>（今天看什么）</span></div>
           <div className="tags">
@@ -362,10 +447,11 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* 配置建议 */}
         <div className="risk-card">
           <div className="label">🎯 仓位建议 <span style={{ fontSize: 11, opacity: 0.7 }}>（怎么配）</span></div>
-          <div className="value" style={{ color: riskClass === 'risk-off' ? 'var(--red)' : riskClass === 'risk-on' ? 'var(--green)' : 'var(--yellow)' }}>{overview.suggestions?.equity ?? '--'}%</div>
+          <div className="value" style={{ color: riskClass === 'risk-off' ? 'var(--red)' : riskClass === 'risk-on' ? 'var(--green)' : 'var(--yellow)' }}>
+            {overview.suggestions?.equity ?? '--'}%
+          </div>
           <div className="sub">{overview.label || '--'}</div>
           <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <span>债券 <span style={{ color: 'var(--yellow)' }}>{overview.suggestions?.bond ?? '--'}%</span></span>
@@ -375,14 +461,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <BullLiquidity report={bull} />
+      <FactorBreakdown factorDetails={overview.factor_details} />
+
+      <div id="sec-liquidity">
+        <BullLiquidity report={bull} />
+      </div>
 
       {/* ========== 二、中国内核 ========== */}
-      <div className="section-title">
+      <div id="sec-china" className="section-title">
         🇨🇳 二、中国内核
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 8 }}>
-          — 中国经济的「体检报告」
-        </span>
+        <span className="section-note">— 中国经济的「体检报告」</span>
       </div>
       <div className="grid-4">
         <MetricCard title="官方制造业PMI" value={china_core.cn_pmi_official?.value} item={china_core.cn_pmi_official} />
@@ -394,18 +482,16 @@ export default function Dashboard() {
         <MetricCard title="LPR (1年)" value={china_core.cn_lpr_1y?.value} unit="%" item={china_core.cn_lpr_1y} />
         <MetricCard title="社融增量" value={china_core.cn_social_financing?.value != null ? (china_core.cn_social_financing.value / 1e8).toFixed(0) : '--'} unit="亿" item={china_core.cn_social_financing} />
         <MetricCard title="财新制造业PMI" value={china_core.cn_pmi_caixin?.value} item={china_core.cn_pmi_caixin} />
+        <MetricCard title="10Y中债收益率" value={cn10yYield != null ? Number(cn10yYield).toFixed(2) : '--'} unit="%" item={china_core.cn_10y_yield} />
       </div>
       <div className="grid-4">
-        <MetricCard title="10Y中债收益率" value={cn10yYield ? Number(cn10yYield).toFixed(2) : '--'} unit="%" item={china_core.cn_10y_yield} />
         <MetricCard title="A股逆回购" value={china_core.cn_repo_gc001?.value} unit="%" item={china_core.cn_repo_gc001} />
       </div>
 
       {/* ========== 三、全球宏观 ========== */}
-      <div className="section-title">
+      <div id="sec-global" className="section-title">
         🌐 三、全球宏观
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 8 }}>
-          — 「外部世界」的天气预报
-        </span>
+        <span className="section-note">— 「外部世界」的天气预报</span>
       </div>
       <div className="grid-4">
         <MetricCard title="美国ISM PMI" value={global_macro.us_ism_pmi?.value} item={global_macro.us_ism_pmi} />
@@ -416,7 +502,7 @@ export default function Dashboard() {
       <div className="grid-4">
         <MetricCard
           title="美联储资产负债表"
-          value={global_macro.fed_balance_sheet?.value ? (global_macro.fed_balance_sheet.value / 1e12).toFixed(2) : '--'}
+          value={global_macro.fed_balance_sheet?.value != null ? (global_macro.fed_balance_sheet.value / 1e12).toFixed(2) : '--'}
           unit="万亿"
           item={global_macro.fed_balance_sheet}
         />
@@ -430,49 +516,42 @@ export default function Dashboard() {
       {global_macro.source_note && <p className="bull-footnote">{global_macro.source_note}</p>}
 
       {/* ========== 四、美元与流动性 ========== */}
-      <div className="section-title">
+      <div id="sec-fx" className="section-title">
         💵 四、美元与流动性
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 8 }}>
-          — 汇率与「水位」
-        </span>
+        <span className="section-note">— 汇率与「水位」</span>
       </div>
       <div className="grid-4">
         <MetricCard title="DXY美元指数" value={fx_liquidity.dxy_idx?.value?.toFixed(2)} item={fx_liquidity.dxy_idx} />
-        <MetricCard title="中美利差" value={cnUsSpread} unit="bp" note="10年中债减10年美债" />
+        <MetricCard title="中美利差" value={cnUsSpread} unit="bp" item={fx_liquidity.cn_us_10y_spread} note="10年中债减10年美债" />
         <MetricCard title="USD/CNH" value={fx_liquidity.usd_cnh?.value?.toFixed(4)} item={fx_liquidity.usd_cnh} />
         <MetricCard title="USD/JPY" value={fx_liquidity.usd_jpy?.value?.toFixed(2)} item={fx_liquidity.usd_jpy} />
       </div>
 
       {/* ========== 五、全球核心资产 ========== */}
-      <div className="section-title">
+      <div id="sec-assets" className="section-title">
         📈 五、全球核心资产
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 8 }}>
-          — 各类资产的「价格」
-        </span>
+        <span className="section-note">— 各类资产的「价格」</span>
       </div>
       <div className="grid-4">
         <MetricCard title="标普500" value={assets.spx?.value?.toLocaleString()} item={assets.spx} />
+        <MetricCard title="纳斯达克" value={assets.nasdaq?.value?.toLocaleString()} item={assets.nasdaq} />
         <MetricCard title="沪深300" value={assets.hs300?.value?.toLocaleString()} item={assets.hs300} />
         <MetricCard title="恒生指数" value={assets.hsi?.value?.toLocaleString()} item={assets.hsi} />
-        <MetricCard title="日经225" value={assets.nk225?.value?.toLocaleString()} item={assets.nk225} />
       </div>
       <div className="grid-4">
+        <MetricCard title="日经225" value={assets.nk225?.value?.toLocaleString()} item={assets.nk225} />
         <MetricCard title="黄金" value={assets.gold_spot?.value?.toLocaleString()} unit="$" item={assets.gold_spot} />
-        <MetricCard title="纳斯达克" value={assets.nasdaq?.value?.toLocaleString()} item={assets.nasdaq} />
         <MetricCard title="WTI原油" value={assets.wti_oil?.value?.toFixed(2)} unit="$" item={assets.wti_oil} />
         <MetricCard title="10Y美债收益率" value={assets.us_10y_yield?.value} unit="%" item={assets.us_10y_yield} />
       </div>
       <div className="grid-4">
         <MetricCard title="2Y美债收益率" value={global_macro.us_2y_yield?.value} unit="%" item={global_macro.us_2y_yield} />
-        <MetricCard title="10Y中债收益率" value={cn10yYield ? Number(cn10yYield).toFixed(2) : '--'} unit="%" item={china_core.cn_10y_yield} />
       </div>
 
       {/* ========== 六、波动率与风险 ========== */}
-      <div className="section-title">
+      <div id="sec-risk" className="section-title">
         ⚠️ 六、波动率与风险
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 8 }}>
-          — 市场的「警报器」
-        </span>
+        <span className="section-note">— 市场的「警报器」</span>
       </div>
       <div className="grid-4">
         <MetricCard title="VIX恐慌指数" value={risk_monitor.vix?.value?.toFixed(2)} item={risk_monitor.vix} />
@@ -483,12 +562,20 @@ export default function Dashboard() {
       <div className="grid-4">
         <MetricCard title="TED利差" value={risk_monitor.ted_spread?.value?.toFixed(0)} unit="bp" item={risk_monitor.ted_spread} />
       </div>
+      <VIXChart value={risk_monitor.vix?.value} />
 
       {/* 底部 */}
       <div className="footer">
-        <span>📊 数据来源：FRED · AKShare · yfinance</span>
+        <span>📊 数据来源：国家统计局 · 人民银行 · 东方财富 · CBOE · 纽约联储 · 美联储</span>
         <span>更新：{meta.updated_at ? new Date(meta.updated_at).toLocaleString('zh-CN') : '--'}</span>
       </div>
+
+      <BriefModal
+        open={briefOpen}
+        content={buildDailyBrief(data, bull)}
+        dateLabel={meta.data_date}
+        onClose={() => setBriefOpen(false)}
+      />
     </div>
   );
 }
