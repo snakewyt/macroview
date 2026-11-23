@@ -27,9 +27,9 @@
       "id": 3,
       "group": "启动",
       "name": "宽松连续累积",
-      "status": "unmet",
-      "rule": "过去 12 个月降息或降准至少 2 次",
-      "detail": "过去 12 个月降息、降准合计 0 次。",
+      "status": "partial",
+      "rule": "过去 12 个月降息或降准至少 2 次（10 年国债 ≤ 2% 且未抬升时算部分满足）",
+      "detail": "过去 12 个月降息、降准合计 0 次。 当前 10 年国债已处于 2% 以下低利率区间，维持宽松算部分满足。",
       "value": 0.0,
       "unit": "次"
     },
@@ -47,9 +47,9 @@
       "id": 5,
       "group": "启动",
       "name": "政策工具点火",
-      "status": "unmet",
-      "rule": "近 3 个月至少有一次降息或降准。社论和改革信号不在这套数据里",
-      "detail": "近 3 个月降息、降准合计 0 次。",
+      "status": "partial",
+      "rule": "近 3 个月至少有一次降息或降准（低利率维持期算部分满足）",
+      "detail": "近 3 个月降息、降准合计 0 次。 当前 10 年国债已处于 2% 以下低利率区间，维持宽松算部分满足。",
       "value": 0.0,
       "unit": "次"
     },
@@ -69,8 +69,8 @@
       "name": "增量资金渠道",
       "status": "unmet",
       "rule": "两融余额一个月上升",
-      "detail": "两融余额没有净流入。",
-      "value": 2185513708663.0,
+      "detail": "两融余额没有上升。",
+      "value": 2143791038403.0,
       "unit": ""
     },
     {
@@ -86,8 +86,8 @@
   ],
   "bear": {
     "stage": "条件未齐",
-    "stage_detail": "尚未满足：剩余流动性转紧、利率不再向下、宽松中断、钱紧、信用在掉",
-    "met_count": 4,
+    "stage_detail": "尚未满足：剩余流动性转紧、利率不再向下、宽松中断、钱紧、信用在掉、没有新的宽松",
+    "met_count": 3,
     "conditions": [
       {
         "id": 1,
@@ -113,9 +113,9 @@
         "id": 3,
         "group": "退潮",
         "name": "宽松中断",
-        "status": "partial",
-        "rule": "过去 12 个月没有降息、降准，同时 10 年国债收益率抬升",
-        "detail": "过去 12 个月降息、降准合计 0 次。缺 12 个月前的 10 年国债，收益率是否抬升还看不了。",
+        "status": "unmet",
+        "rule": "过去 12 个月没有降息、降准，同时 10 年国债收益率抬升（2% 以下低利率维持期除外）",
+        "detail": "过去 12 个月降息、降准合计 0 次。缺 12 个月前的 10 年国债，收益率是否抬升还看不了。 当前仍处 2% 以下低利率维持期，不判为宽松中断。",
         "value": 0.0,
         "unit": "次"
       },
@@ -133,8 +133,8 @@
         "id": 5,
         "group": "退潮",
         "name": "没有新的宽松",
-        "status": "met",
-        "rule": "近 3 个月没有降息、降准",
+        "status": "unmet",
+        "rule": "近 3 个月没有降息、降准，且未处于 2% 以下低利率维持期",
         "detail": "近 3 个月降息、降准合计 0 次。",
         "value": 0.0,
         "unit": "次"
@@ -154,8 +154,8 @@
         "group": "离场",
         "name": "增量资金撤出",
         "status": "met",
-        "rule": "两融余额一个月下降，或 GC001 不低于 5%",
-        "detail": "两融余额 24455亿 → 21855亿；GC001 1.395%。",
+        "rule": "两融余额一个月下降，或 GC001 不低于 3.0%（近5日均值不低于 2.5%）",
+        "detail": "两融余额 24434亿 → 21438亿；GC001 1.395%。",
         "value": 1.395,
         "unit": ""
       },
@@ -171,7 +171,777 @@
       }
     ]
   },
-  "updated_at": "2026-11-20T21:04:17",
+  "history": [
+    {
+      "date": "2018-10",
+      "bull_met": 2,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2018-11",
+      "bull_met": 2,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2018-12",
+      "bull_met": 2,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-01",
+      "bull_met": 2,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-02",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-03",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-04",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-05",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-06",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-07",
+      "bull_met": 4,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-08",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-09",
+      "bull_met": 4,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-10",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-11",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2019-12",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-01",
+      "bull_met": 4,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-02",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-03",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-04",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-05",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-06",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-07",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-08",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-09",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-10",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-11",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2020-12",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2021-01",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2021-02",
+      "bull_met": 2,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2021-03",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2021-04",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2021-05",
+      "bull_met": 1,
+      "bear_met": 5,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-06",
+      "bull_met": 1,
+      "bear_met": 5,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-07",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-08",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-09",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-10",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-11",
+      "bull_met": 1,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2021-12",
+      "bull_met": 2,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2022-01",
+      "bull_met": 2,
+      "bear_met": 4,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2022-02",
+      "bull_met": 3,
+      "bear_met": 3,
+      "bull_stage": "条件未齐",
+      "bear_stage": "主跌条件",
+      "hs300": null
+    },
+    {
+      "date": "2022-03",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-04",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-05",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-06",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-07",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-08",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-09",
+      "bull_met": 3,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-10",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-11",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2022-12",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-01",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-02",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-03",
+      "bull_met": 3,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-04",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-05",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-06",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-07",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-08",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-09",
+      "bull_met": 4,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-10",
+      "bull_met": 4,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-11",
+      "bull_met": 4,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2023-12",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-01",
+      "bull_met": 4,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-02",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2024-03",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2024-04",
+      "bull_met": 3,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2024-05",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-06",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-07",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-08",
+      "bull_met": 3,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-09",
+      "bull_met": 4,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-10",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-11",
+      "bull_met": 5,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2024-12",
+      "bull_met": 4,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-01",
+      "bull_met": 4,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-02",
+      "bull_met": 3,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-03",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-04",
+      "bull_met": 5,
+      "bear_met": 0,
+      "bull_stage": "主升条件",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-05",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-06",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-07",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-08",
+      "bull_met": 5,
+      "bear_met": 0,
+      "bull_stage": "主升条件",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-09",
+      "bull_met": 5,
+      "bear_met": 0,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-10",
+      "bull_met": 4,
+      "bear_met": 0,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-11",
+      "bull_met": 2,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2025-12",
+      "bull_met": 0,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-01",
+      "bull_met": 1,
+      "bear_met": 1,
+      "bull_stage": "信用接棒",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-02",
+      "bull_met": 3,
+      "bear_met": 0,
+      "bull_stage": "主升条件",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-03",
+      "bull_met": 2,
+      "bear_met": 0,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-04",
+      "bull_met": 2,
+      "bear_met": 0,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-05",
+      "bull_met": 1,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2026-06",
+      "bull_met": 1,
+      "bear_met": 1,
+      "bull_stage": "条件未齐",
+      "bear_stage": "信用先缩",
+      "hs300": null
+    },
+    {
+      "date": "2026-07",
+      "bull_met": 1,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-08",
+      "bull_met": 1,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-09",
+      "bull_met": 1,
+      "bear_met": 2,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    }
+  ],
+  "updated_at": "2026-11-23T15:50:00",
   "source": "国家统计局 / 中国货币网 / 中债 / 交易所",
   "notes": {
     "credit_name": "新增人民币贷款12个月滚动同比",
@@ -221,8 +991,8 @@
       "value": 15.5
     },
     "margin_balance": {
-      "date": "2026-11-19",
-      "value": 2185513708663.0
+      "date": "2026-11-20",
+      "value": 2143791038403.0
     },
     "north_money": null,
     "gc001": {

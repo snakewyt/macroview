@@ -55,6 +55,7 @@ class ApiRouteTests(unittest.TestCase):
             "/api/v1/public-snapshot",
             "/api/v1/bull-liquidity",
             "/api/v1/brief",
+            "/api/v1/events",
         ):
             self.assertIn(expected, paths)
 
@@ -81,14 +82,26 @@ class ApiRouteTests(unittest.TestCase):
             _ = backend_main.get_overview()
             self.assertEqual(mocked_em.call_count, 1)
 
-            # fx-liquidity 之前因 fetch_yfinance 参数个数错误会 500，这里验证正常返回
+            # fx-liquidity 之前因 fetch_yfinance 参数个数错误会 500，这里验证正常返回，并含 10Y-2Y 利差
             fx = backend_main.get_fx_liquidity()
             self.assertIn("cn_us_10y_spread", fx)
+            self.assertIn("us_10y_2y_spread", fx)
 
             # 简报接口应命中缓存并输出 Markdown
             brief = backend_main.get_daily_brief()
             self.assertIn("每日宏观简报", brief["markdown"])
             self.assertEqual(mocked_em.call_count, 1)
+
+            # 宏观日历应返回未来事件列表（含央行议息会议）
+            events_resp = backend_main.get_events(days=30)
+            self.assertTrue(len(events_resp["events"]) >= 4)
+
+            from datetime import date
+            dec_events = backend_main.build_macro_calendar(date(2026, 11, 23), days=30)
+            rate_titles = [ev["title"] for ev in dec_events if ev.get("category") == "rate"]
+            self.assertTrue(any("FOMC" in t for t in rate_titles))
+            self.assertTrue(any("ECB" in t for t in rate_titles))
+            self.assertTrue(any("BOJ" in t for t in rate_titles))
 
     def test_bull_liquidity_endpoint(self):
         body = backend_main.get_bull_liquidity()

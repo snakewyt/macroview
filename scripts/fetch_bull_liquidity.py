@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-from bull_liquidity import evaluate_bear_liquidity, evaluate_bull_liquidity  # noqa: E402
+from bull_liquidity import backtest_liquidity, evaluate_bear_liquidity, evaluate_bull_liquidity  # noqa: E402
 
 
 def _import_akshare():
@@ -432,6 +432,19 @@ def _gc001_series():
     return [{"date": str(point.get("date") or "")[:10], "value": float(point["value"])}]
 
 
+def _hs300_monthly():
+    """拉取沪深300历史收盘价（用于牛熊流动性回测对齐）。"""
+    try:
+        import akshare as ak
+        df = ak.stock_zh_index_daily(symbol="sh000300")
+        if df is None or df.empty:
+            return []
+        return _points(df, ["date", "日期"], ["close", "收盘"])
+    except Exception as exc:
+        print(f"沪深300历史拉取失败（不影响主计算）: {exc}")
+        return []
+
+
 def main():
     series, notes = fetch_series()
     series["gc001"] = _gc001_series()
@@ -443,6 +456,7 @@ def main():
             if item["id"] in (4, 8):
                 item["detail"] = f"{credit_name}。{item['detail']}"
     report["bear"] = bear
+    report["history"] = backtest_liquidity(series, hs300=_hs300_monthly(), max_months=96)
     report["updated_at"] = datetime.now().isoformat(timespec="seconds")
     report["source"] = "国家统计局 / 中国货币网 / 中债 / 交易所"
     report["notes"] = notes

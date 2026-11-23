@@ -601,6 +601,26 @@ def latest_rrp():
     return _point(float(amount), operation.get("operationDate") or "", "纽约联储")
 
 
+def latest_hs300_pe():
+    """沪深300滚动市盈率 PE-TTM（用于计算股债性价比 ERP）。"""
+    try:
+        import akshare as ak
+        df = ak.stock_index_pe_lg(symbol="沪深300")
+        if df is None or df.empty:
+            return None
+        row = df.iloc[-1]
+        pe_col = next((c for c in df.columns if "滚动市盈率" in str(c) or "pe_ttm" in str(c).lower()), None)
+        date_col = next((c for c in df.columns if "日期" in str(c) or "date" in str(c).lower()), None)
+        if not pe_col:
+            return None
+        val = float(row[pe_col])
+        day = str(row[date_col])[:10] if date_col else datetime.now().strftime("%Y-%m-%d")
+        return _point(round(val, 2), day, "乐咕乐股")
+    except Exception as exc:
+        print(f"沪深300 PE 失败: {exc}")
+        return None
+
+
 def main():
     snapshot = {
         "updated_at": datetime.now().isoformat(timespec="seconds"),
@@ -661,6 +681,10 @@ def main():
         if old:
             snapshot["china_core"]["cn_m1_m2_spread"] = old
             print(f"剪刀差这次没取到，沿用 {old.get('date')}")
+    hs300_pe = latest_hs300_pe()
+    snapshot["china_core"]["hs300_pe"] = hs300_pe or (previous.get("china_core") or {}).get("hs300_pe")
+    if snapshot["china_core"].get("hs300_pe"):
+        print("hs300_pe", snapshot["china_core"]["hs300_pe"])
     try:
         quotes = latest_quotes()
     except Exception as exc:

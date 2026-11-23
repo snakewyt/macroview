@@ -19,6 +19,16 @@ export const fetchBullLiquidity = async () => {
   return resp.data;
 };
 
+export const triggerBullLiquidityRefresh = async () => {
+  const resp = await api.post('/api/v1/bull-liquidity/refresh');
+  return resp.data;
+};
+
+export const fetchBullLiquidityStatus = async () => {
+  const resp = await api.get('/api/v1/bull-liquidity/status');
+  return resp.data;
+};
+
 export const fetchVixHistory = async (days = 30, refresh = false) => {
   const resp = await api.get('/api/v1/vix-history', {
     params: refresh ? { days, refresh: true } : { days },

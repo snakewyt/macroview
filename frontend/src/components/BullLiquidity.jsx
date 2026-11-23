@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import LiquidityBacktestChart from './LiquidityBacktestChart';
 
 const STATUS_TEXT = {
   met: '满足',
@@ -7,7 +8,7 @@ const STATUS_TEXT = {
   missing: '缺数据',
 };
 
-export default function BullLiquidity({ report }) {
+export default function BullLiquidity({ report, onReload }) {
   const [mode, setMode] = useState('bull');
 
   if (!report) {
@@ -72,6 +73,7 @@ export default function BullLiquidity({ report }) {
         </ul>
       )}
       {report.notes?.earnings_note && <p className="bull-footnote">{report.notes.earnings_note}</p>}
+      <LiquidityBacktestChart history={report.history} onReload={onReload} />
     </section>
   );
 }

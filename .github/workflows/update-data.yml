@@ -27,6 +27,12 @@ jobs:
       - name: Refresh snapshot and liquidity reports
         run: python scripts/refresh_all.py
 
+      - name: Send optional macro brief alert
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          ALERT_MODE: ${{ vars.ALERT_MODE }}
+        run: python scripts/send_alert.py
+
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"

@@ -8,9 +8,12 @@
 
 import os
 import json
+import subprocess
+import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Optional, Dict, Any, Callable
 
 import requests
@@ -427,6 +430,7 @@ def _build_dashboard_payload() -> dict:
     # 计算中美利差 (bp)
     cn_10y = (china_core.get("cn_10y_yield") or {}).get("value")
     us_10y = (assets.get("us_10y_yield") or global_macro.get("us_10y_yield") or {}).get("value")
+    us_2y = (global_macro.get("us_2y_yield") or {}).get("value")
     cn_us_spread = round((cn_10y - us_10y) * 100.0, 1) if (cn_10y is not None and us_10y is not None) else None
     if cn_us_spread is not None:
         fx_liquidity["cn_us_10y_spread"] = {
@@ -434,6 +438,29 @@ def _build_dashboard_payload() -> dict:
             "unit": "bp",
             "date": (china_core.get("cn_10y_yield") or {}).get("date") or (assets.get("us_10y_yield") or {}).get("date") or "",
             "source": "10Y中债减美债",
+        }
+
+    # 计算美债 10Y - 2Y 期限利差 (bp)
+    if us_10y is not None and us_2y is not None:
+        us_curve_bp = round((us_10y - us_2y) * 100.0, 1)
+        curve_date = (global_macro.get("us_10y_yield") or {}).get("date") or (global_macro.get("us_2y_yield") or {}).get("date") or ""
+        fx_liquidity["us_10y_2y_spread"] = {
+            "value": us_curve_bp,
+            "unit": "bp",
+            "date": curve_date,
+            "source": "10Y美债减2Y美债",
+        }
+
+    # 计算沪深300 股债性价比 ERP = 100 / PE_TTM - 10Y中债收益率（仅在快照已有 PE 时计算，不做假数据）
+    hs300_pe = (china_core.get("hs300_pe") or {}).get("value")
+    if hs300_pe and cn_10y is not None and hs300_pe > 0:
+        erp_val = round(100.0 / hs300_pe - cn_10y, 2)
+        china_core["hs300_erp"] = {
+            "value": erp_val,
+            "pe": round(float(hs300_pe), 2),
+            "unit": "%",
+            "date": (china_core.get("hs300_pe") or {}).get("date") or (china_core.get("cn_10y_yield") or {}).get("date") or "",
+            "source": "1/PE减10Y中债",
         }
 
     # 统一信号合成
@@ -499,7 +526,140 @@ def _build_dashboard_payload() -> dict:
         "fx_liquidity": fx_liquidity,
         "assets": assets,
         "risk_monitor": risk_monitor,
+        "events": build_macro_calendar(now.date(), days=30),
     }
+
+
+# ============ 宏观经济日历（含官方央行议息会议 + 常规数据发布窗口） ============
+# 官方日程（利率决议公布日，覆盖 2026–2027）
+CENTRAL_BANK_MEETINGS = [
+    # 美联储 FOMC（标 SEP 的含经济预测与点阵图）
+    ("2026-01-28", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2026-03-18", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2026-04-29", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2026-06-17", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2026-07-29", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2026-09-16", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2026-10-28", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2026-12-09", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2027-01-27", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2027-03-17", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2027-04-28", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2027-06-09", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2027-07-28", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    ("2027-09-15", "US", "美联储 FOMC 议息决议（含点阵图）", "官方日程 · 附经济预测 SEP 与发布会"),
+    ("2027-11-17", "US", "美联储 FOMC 议息决议", "官方日程 · 美东 14:00 公布利率决议"),
+    # 日本央行 BOJ（影响日元套息交易与 USD/JPY）
+    ("2026-01-23", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 关注利率与套息交易波动"),
+    ("2026-03-19", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与 USD/JPY"),
+    ("2026-04-28", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2026-06-16", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与 USD/JPY"),
+    ("2026-07-31", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2026-09-18", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与 USD/JPY"),
+    ("2026-10-30", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2026-12-18", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与套息交易波动"),
+    ("2027-01-22", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2027-03-18", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与 USD/JPY"),
+    ("2027-04-28", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2027-06-11", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与 USD/JPY"),
+    ("2027-07-22", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2027-09-22", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与 USD/JPY"),
+    ("2027-10-29", "JP", "日本央行 BOJ 议息决议（含展望报告）", "官方日程 · 附季度经济与通胀展望"),
+    ("2027-12-17", "JP", "日本央行 BOJ 议息决议", "官方日程 · 关注利率与套息交易波动"),
+    # 欧洲央行 ECB
+    ("2026-02-05", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2026-03-19", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2026-04-30", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2026-06-11", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2026-07-23", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2026-09-10", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2026-10-29", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2026-12-17", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2027-02-04", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2027-03-18", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2027-04-29", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2027-06-10", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2027-07-22", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2027-09-09", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+    ("2027-10-28", "EU", "欧洲央行 ECB 议息决议", "官方日程 · 欧洲中部时间 14:15 公布"),
+    ("2027-12-16", "EU", "欧洲央行 ECB 议息决议（含经济预测）", "官方日程 · 附宏观经济预测"),
+]
+
+
+def _next_weekday(d: date) -> date:
+    if d.weekday() == 5:
+        return d + timedelta(days=2)
+    if d.weekday() == 6:
+        return d + timedelta(days=1)
+    return d
+
+
+def _month_end(year: int, month: int) -> date:
+    if month == 12:
+        return date(year, 12, 31)
+    return date(year, month + 1, 1) - timedelta(days=1)
+
+
+def _first_friday(year: int, month: int) -> date:
+    d = date(year, month, 1)
+    offset = (4 - d.weekday()) % 7
+    return d + timedelta(days=offset)
+
+
+def _last_friday(year: int, month: int) -> date:
+    d = _month_end(year, month)
+    offset = (d.weekday() - 4) % 7
+    return d - timedelta(days=offset)
+
+
+def build_macro_calendar(today: Optional[date] = None, days: int = 30) -> list:
+    """生成未来 N 天内全球主要央行议息会议与中美核心宏观数据的发布窗口。"""
+    base = today or datetime.now().date()
+    end = base + timedelta(days=max(days, 1))
+    months_to_check = {(base.year, base.month), (end.year, end.month)}
+    mid = base + timedelta(days=15)
+    months_to_check.add((mid.year, mid.month))
+
+    events = []
+    # 1. 官方央行议息会议
+    for date_str, region, title, note in CENTRAL_BANK_MEETINGS:
+        ev_date = date.fromisoformat(date_str)
+        if base <= ev_date <= end:
+            events.append({
+                "date": date_str,
+                "days_away": (ev_date - base).days,
+                "region": region,
+                "category": "rate",
+                "title": title,
+                "impact": "高",
+                "note": note,
+            })
+
+    # 2. 中美月度核心数据常规发布窗口
+    for year, month in sorted(months_to_check):
+        candidates = [
+            (_next_weekday(date(year, month, 1)), "CN", "财新制造业 PMI", "中", "常规月初首工作日公布"),
+            (_first_friday(year, month), "US", "美国非农就业 (NFP)", "高", "常规每月首个周五公布"),
+            (_next_weekday(date(year, month, 9)), "CN", "中国 CPI / PPI 同比", "高", "常规每月 9–10 日公布"),
+            (_next_weekday(date(year, month, 12)), "CN", "中国社融 / M1 / M2", "高", "常规每月 10–15 日窗口"),
+            (_next_weekday(date(year, month, 13)), "US", "美国 CPI 通胀数据", "高", "常规每月中旬公布"),
+            (_next_weekday(date(year, month, 20)), "CN", "中国 1Y / 5Y LPR 报价", "高", "每月 20 日（遇节假日顺延）"),
+            (_last_friday(year, month), "US", "美国核心 PCE 同比", "高", "常规每月末最后一个周五"),
+            (_month_end(year, month), "CN", "中国官方制造业 PMI", "高", "常规每月末最后一日公布"),
+        ]
+        for ev_date, region, title, impact, note in candidates:
+            if base <= ev_date <= end:
+                events.append({
+                    "date": ev_date.isoformat(),
+                    "days_away": (ev_date - base).days,
+                    "region": region,
+                    "category": "data",
+                    "title": title,
+                    "impact": impact,
+                    "note": note,
+                })
+    events.sort(key=lambda item: (item["date"], 0 if item["category"] == "rate" else 1, item["region"], item["title"]))
+    return events
 
 
 # ============ API 端点 ============
@@ -552,6 +712,13 @@ def get_risk(refresh: bool = False):
     return get_dashboard(refresh=refresh)["risk_monitor"]
 
 
+@app.get("/api/v1/events")
+def get_events(days: int = 30):
+    """未来央行议息会议与宏观数据常规发布窗口"""
+    safe_days = max(7, min(days, 90))
+    return {"events": build_macro_calendar(datetime.now().date(), days=safe_days)}
+
+
 @app.get("/api/v1/vix-history")
 def get_vix_history(days: int = 30, refresh: bool = False):
     """VIX 历史数据（有 FRED Key 走 FRED，否则走 CBOE 公开 CSV）。"""
@@ -577,6 +744,62 @@ def get_public_snapshot():
 def get_bull_liquidity():
     """A股牛熊流动性 8 条条件。"""
     return load_bull_liquidity_report()
+
+
+_BULL_REFRESH_LOCK = threading.Lock()
+_BULL_REFRESH_STATE: Dict[str, Any] = {
+    "running": False,
+    "last_error": None,
+    "started_at": None,
+    "finished_at": None,
+}
+
+
+def _run_bull_liquidity_script() -> None:
+    root = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+    script = os.path.join(root, "scripts", "fetch_bull_liquidity.py")
+    err_msg = None
+    try:
+        proc = subprocess.run(
+            [sys.executable, script],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=180,
+        )
+        if proc.returncode != 0:
+            err_msg = (proc.stderr or proc.stdout or f"exit code {proc.returncode}").strip()[-300:]
+    except Exception as exc:
+        err_msg = str(exc)
+    finally:
+        with _BULL_REFRESH_LOCK:
+            _BULL_REFRESH_STATE["running"] = False
+            _BULL_REFRESH_STATE["last_error"] = err_msg
+            _BULL_REFRESH_STATE["finished_at"] = datetime.now().isoformat(timespec="seconds")
+
+
+@app.post("/api/v1/bull-liquidity/refresh")
+def trigger_bull_liquidity_refresh():
+    """后台异步运行 fetch_bull_liquidity.py 生成最新条件与历史回测曲线。"""
+    with _BULL_REFRESH_LOCK:
+        if _BULL_REFRESH_STATE["running"]:
+            return {"started": False, **_BULL_REFRESH_STATE}
+        _BULL_REFRESH_STATE["running"] = True
+        _BULL_REFRESH_STATE["last_error"] = None
+        _BULL_REFRESH_STATE["started_at"] = datetime.now().isoformat(timespec="seconds")
+        threading.Thread(target=_run_bull_liquidity_script, daemon=True).start()
+        return {"started": True, **_BULL_REFRESH_STATE}
+
+
+@app.get("/api/v1/bull-liquidity/status")
+def get_bull_liquidity_status():
+    """查询牛熊流动性回测后台生成状态。"""
+    report = load_bull_liquidity_report()
+    has_history = len(report.get("history") or []) >= 3
+    with _BULL_REFRESH_LOCK:
+        return {**_BULL_REFRESH_STATE, "has_history": has_history}
 
 
 def format_daily_brief_markdown(dashboard: dict, bull: Optional[dict] = None) -> str:

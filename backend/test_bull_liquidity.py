@@ -2,7 +2,7 @@
 
 import unittest
 
-from bull_liquidity import evaluate_bear_liquidity, evaluate_bull_liquidity
+from bull_liquidity import backtest_liquidity, evaluate_bear_liquidity, evaluate_bull_liquidity
 
 
 def _monthly(start, values):
@@ -143,6 +143,35 @@ class BearLiquidityTests(unittest.TestCase):
         self.assertEqual(status[1], "partial")
         self.assertEqual(status[2], "unmet")
         self.assertEqual(report["stage"], "条件未齐")
+
+    def test_low_rate_regime_does_not_trigger_bear_tightening(self):
+        report = evaluate_bear_liquidity({
+            "m2_yoy": _monthly((2024, 1), [8.0] * 14),
+            "nominal_gdp_yoy": [{"date": "2024-03", "value": 5.0}],
+            "lpr_1y": _monthly((2024, 1), [3.0] * 14),
+            "cn_10y": _monthly((2024, 1), [1.75] * 14),
+            "credit_yoy": _monthly((2024, 1), [8.0] * 14),
+            "gc001": [{"date": "2025-02", "value": 3.2}],
+        })
+        status = {item["id"]: item["status"] for item in report["conditions"]}
+        self.assertEqual(status[3], "unmet")
+        self.assertEqual(status[5], "unmet")
+        self.assertEqual(status[7], "met")
+
+    def test_backtest_liquidity_produces_monthly_timeline(self):
+        series = {
+            "m2_yoy": _monthly((2023, 1), [8.0 + i * 0.1 for i in range(16)]),
+            "nominal_gdp_yoy": [{"date": "2023-03", "value": 5.0}, {"date": "2024-03", "value": 5.0}],
+            "m1_yoy": _monthly((2023, 1), [1.0 + i * 0.2 for i in range(16)]),
+            "lpr_1y": _monthly((2023, 1), [3.45] * 12 + [3.35, 3.25, 3.10, 3.00]),
+            "cn_10y": _monthly((2023, 1), [2.6 - i * 0.05 for i in range(16)]),
+            "credit_yoy": _monthly((2023, 1), [8.5] * 16),
+        }
+        hs300 = _monthly((2023, 1), [3800 + i * 20 for i in range(16)])
+        history = backtest_liquidity(series, hs300=hs300, max_months=16)
+        self.assertEqual(len(history), 16)
+        self.assertEqual(history[-1]["date"], "2024-04")
+        self.assertEqual(history[-1]["hs300"], 4100.0)
 
 
 if __name__ == "__main__":

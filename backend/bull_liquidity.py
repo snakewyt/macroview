@@ -278,23 +278,29 @@ def evaluate_bull_liquidity(series: dict) -> dict:
         until = max(_parse(item["date"]) for item in anchors)
         cuts_12m = _count_cuts(lpr, _add_months(until, -12), until) + _count_cuts(rrr, _add_months(until, -12), until)
         cuts_3m = _count_cuts(lpr, _add_months(until, -3), until) + _count_cuts(rrr, _add_months(until, -3), until)
+        low_rate_regime = (
+            bond_now is not None
+            and bond_now["value"] <= 2.0
+            and not (bond_3m is not None and bond_now["value"] >= bond_3m["value"] + 0.10)
+        )
         if cuts_12m >= 2:
             status_3 = "met"
-        elif cuts_12m == 1:
+        elif cuts_12m == 1 or low_rate_regime:
             status_3 = "partial"
         else:
             status_3 = "unmet"
+        low_rate_hint = " 当前 10 年国债已处于 2% 以下低利率区间，维持宽松算部分满足。" if (cuts_12m == 0 and low_rate_regime) else ""
         condition_3 = _condition(
             3, "启动", "宽松连续累积", status_3,
-            "过去 12 个月降息或降准至少 2 次",
-            f"过去 12 个月降息、降准合计 {cuts_12m} 次。",
+            "过去 12 个月降息或降准至少 2 次（10 年国债 ≤ 2% 且未抬升时算部分满足）",
+            f"过去 12 个月降息、降准合计 {cuts_12m} 次。{low_rate_hint}",
             cuts_12m,
             "次",
         )
         condition_5 = _condition(
-            5, "启动", "政策工具点火", "met" if cuts_3m >= 1 else "unmet",
-            "近 3 个月至少有一次降息或降准。社论和改革信号不在这套数据里",
-            f"近 3 个月降息、降准合计 {cuts_3m} 次。",
+            5, "启动", "政策工具点火", "met" if cuts_3m >= 1 else ("partial" if low_rate_regime else "unmet"),
+            "近 3 个月至少有一次降息或降准（低利率维持期算部分满足）",
+            f"近 3 个月降息、降准合计 {cuts_3m} 次。{low_rate_hint}",
             cuts_3m,
             "次",
         )
@@ -576,25 +582,32 @@ def evaluate_bear_liquidity(series: dict) -> dict:
             bond_now is not None and bond_12m is not None
             and bond_now["value"] > bond_12m["value"] + 1e-9
         )
+        low_rate_regime = (
+            bond_now is not None
+            and bond_now["value"] <= 2.0
+            and not yield_up
+        )
         if cuts_12m == 0 and yield_up:
             status_3 = "met"
-        elif cuts_12m == 0:
+        elif cuts_12m == 0 and not low_rate_regime:
             status_3 = "partial"
         else:
             status_3 = "unmet"
         bond_12_text = "缺 12 个月前的 10 年国债，收益率是否抬升还看不了。"
         if bond_now is not None and bond_12m is not None:
             bond_12_text = f"10 年国债 {_num(bond_12m['value'])}% → {_num(bond_now['value'])}%。"
+        if low_rate_regime and cuts_12m == 0:
+            bond_12_text += " 当前仍处 2% 以下低利率维持期，不判为宽松中断。"
         condition_3 = _condition(
             3, "退潮", "宽松中断", status_3,
-            "过去 12 个月没有降息、降准，同时 10 年国债收益率抬升",
+            "过去 12 个月没有降息、降准，同时 10 年国债收益率抬升（2% 以下低利率维持期除外）",
             f"过去 12 个月降息、降准合计 {cuts_12m} 次。{bond_12_text}",
             cuts_12m,
             "次",
         )
         condition_5 = _condition(
-            5, "退潮", "没有新的宽松", "met" if cuts_3m == 0 else "unmet",
-            "近 3 个月没有降息、降准",
+            5, "退潮", "没有新的宽松", "met" if (cuts_3m == 0 and not low_rate_regime) else "unmet",
+            "近 3 个月没有降息、降准，且未处于 2% 以下低利率维持期",
             f"近 3 个月降息、降准合计 {cuts_3m} 次。",
             cuts_3m,
             "次",
@@ -658,12 +671,20 @@ def evaluate_bear_liquidity(series: dict) -> dict:
 
     margin_now = _latest(margin)
     margin_prev = _months_before(margin, 1)
-    gc001_now = _latest(gc001)
+    gc001_sorted = _sorted(gc001)
+    gc001_now = gc001_sorted[-1] if gc001_sorted else None
+    gc001_5d_avg = (
+        sum(p["value"] for p in gc001_sorted[-5:]) / min(5, len(gc001_sorted))
+        if gc001_sorted else None
+    )
     margin_down = (
         margin_now is not None and margin_prev is not None
         and margin_now["value"] < margin_prev["value"]
     )
-    gc001_tight = gc001_now is not None and gc001_now["value"] >= 5
+    gc001_tight = (
+        (gc001_now is not None and gc001_now["value"] >= 3.0)
+        or (len(gc001_sorted) >= 3 and gc001_5d_avg is not None and gc001_5d_avg >= 2.5)
+    )
     watched = []
     if margin_now is not None and margin_prev is not None:
         watched.append("两融余额")
@@ -672,7 +693,7 @@ def evaluate_bear_liquidity(series: dict) -> dict:
     if not watched:
         condition_7 = _condition(
             7, "离场", "增量资金撤出", "missing",
-            "两融余额一个月下降，或 GC001 不低于 5%",
+            "两融余额一个月下降，或 GC001 不低于 3.0%（近5日均值不低于 2.5%）",
             "缺两融和 GC001，这条还不能判断。",
         )
     else:
@@ -683,7 +704,7 @@ def evaluate_bear_liquidity(series: dict) -> dict:
             pieces.append(f"GC001 {_num(gc001_now['value'], 3)}%")
         condition_7 = _condition(
             7, "离场", "增量资金撤出", "met" if margin_down or gc001_tight else "unmet",
-            "两融余额一个月下降，或 GC001 不低于 5%",
+            "两融余额一个月下降，或 GC001 不低于 3.0%（近5日均值不低于 2.5%）",
             "；".join(pieces) + "。",
             gc001_now["value"] if gc001_now is not None else (margin_now or {}).get("value"),
             "",
@@ -733,3 +754,52 @@ def evaluate_bear_liquidity(series: dict) -> dict:
         "met_count": sum(1 for item in conditions if item["status"] == "met"),
         "conditions": conditions,
     }
+
+
+
+def _slice_asof(series: dict, cutoff_iso: str) -> dict:
+    """只保留 <= cutoff_iso 的观测点，确保历史回测零未来函数。"""
+    sliced = {}
+    for key, points in (series or {}).items():
+        sliced[key] = [
+            p for p in _sorted(points)
+            if p["date"] <= cutoff_iso
+        ]
+    return sliced
+
+
+def backtest_liquidity(
+    series: dict,
+    hs300: Optional[list] = None,
+    max_months: int = 96,
+) -> list:
+    """
+    无未来函数月度回测：
+    按 M2 同比的月度时间轴，逐月截断序列并计算当月牛/熊流动性满足条数与阶段，
+    可选对齐沪深300月度收盘价，方便直观验证历史大拐点。
+    """
+    m2_points = _sorted(series.get("m2_yoy") or [])
+    if len(m2_points) < 12:
+        return []
+
+    hs300_sorted = _sorted(hs300 or [])
+    timeline = m2_points[-max_months:]
+    records = []
+    for point in timeline:
+        month_iso = point["date"]
+        # 取该月最后一天作为截断点，纳入当月公布的 LPR / 国债 / 两融数据
+        dt = _parse(month_iso)
+        month_end = date(dt.year, dt.month, _month_length(dt.year, dt.month)).isoformat()
+        sub = _slice_asof(series, month_end)
+        bull_res = evaluate_bull_liquidity(sub)
+        bear_res = evaluate_bear_liquidity(sub)
+        hs_point = _asof(hs300_sorted, _parse(month_end)) if hs300_sorted else None
+        records.append({
+            "date": month_iso[:7],
+            "bull_met": bull_res["met_count"],
+            "bear_met": bear_res["met_count"],
+            "bull_stage": bull_res["stage"],
+            "bear_stage": bear_res["stage"],
+            "hs300": round(hs_point["value"], 2) if hs_point else None,
+        })
+    return records

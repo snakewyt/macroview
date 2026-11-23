@@ -3,6 +3,7 @@ import { buildDailyBrief, fetchBullLiquidity, fetchDashboard, scissorsView } fro
 import BriefModal from './BriefModal';
 import BullLiquidity from './BullLiquidity';
 import FactorBreakdown from './FactorBreakdown';
+import MacroCalendar from './MacroCalendar';
 import VIXChart from './VIXChart';
 import '../styles/dashboard.css';
 
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { id: 'sec-fx', label: '美元与流动性' },
   { id: 'sec-assets', label: '全球资产' },
   { id: 'sec-risk', label: '波动与风险' },
+  { id: 'sec-events', label: '事件日历' },
 ];
 
 // 指标解释数据
@@ -39,6 +41,8 @@ const FIELD_EXPLANATIONS = {
   // === 美元与流动性模块 ===
   'DXY美元指数': '美元强弱。>105=强势美元（压制A股），<100=弱势美元（利好A股）。',
   '中美利差': '外资流向总开关。收窄=资本回流中国（利好），走阔=资本外逃（利空）。',
+  '美债10Y-2Y利差': '经典美国衰退预警指标。长期倒挂(<0bp)预示经济降温，由负转正(陡峭化)往往对应降息周期启动。',
+  '沪深300股债性价比': 'ERP = 1/PE(TTM) - 10Y中债收益率。越高代表股票相对国债越便宜；>6% 通常对应历史高性价比区间，<3% 偏贵。',
   'USD/CNH': '人民币汇率。>7.30=贬值压力（利空A股），<7.10=升值（利好）。',
   'USD/JPY': '套息交易温度。日元急升=套息平仓（危险信号，可能引发流动性危机）。',
 
@@ -136,6 +140,19 @@ function readout(title, value, item) {
     if (number <= -200) return { text: '利差很宽', tone: 'bad' };
     if (number <= -100) return { text: '利差偏宽', tone: 'neutral' };
     return { text: '利差不大', tone: 'good' };
+  }
+  if (title === '美债10Y-2Y利差') {
+    if (!hasNumber) return { text: '缺数据', tone: 'missing' };
+    if (number < 0) return { text: '曲线倒挂', tone: 'bad' };
+    if (number < 50) return { text: '小幅正斜率', tone: 'neutral' };
+    return { text: '曲线正常陡峭', tone: 'good' };
+  }
+  if (title === '沪深300股债性价比') {
+    if (!hasNumber) return { text: '待拉取 PE', tone: 'missing' };
+    if (number >= 6) return { text: '权益性价比很高', tone: 'good' };
+    if (number >= 4.5) return { text: '权益偏便宜', tone: 'good' };
+    if (number >= 3) return { text: '股债均衡', tone: 'neutral' };
+    return { text: '权益偏贵', tone: 'bad' };
   }
   if (title === 'USD/CNH') {
     if (!hasNumber) return { text: '缺数据', tone: 'missing' };
@@ -364,6 +381,7 @@ export default function Dashboard() {
     fx_liquidity = {},
     assets = {},
     risk_monitor = {},
+    events = [],
     meta = {},
   } = data;
 
@@ -464,7 +482,10 @@ export default function Dashboard() {
       <FactorBreakdown factorDetails={overview.factor_details} />
 
       <div id="sec-liquidity">
-        <BullLiquidity report={bull} />
+        <BullLiquidity
+          report={bull}
+          onReload={() => fetchBullLiquidity().then(setBull).catch(() => {})}
+        />
       </div>
 
       {/* ========== 二、中国内核 ========== */}
@@ -486,6 +507,13 @@ export default function Dashboard() {
       </div>
       <div className="grid-4">
         <MetricCard title="A股逆回购" value={china_core.cn_repo_gc001?.value} unit="%" item={china_core.cn_repo_gc001} />
+        <MetricCard
+          title="沪深300股债性价比"
+          value={china_core.hs300_erp?.value != null ? Number(china_core.hs300_erp.value).toFixed(2) : '--'}
+          unit="%"
+          item={china_core.hs300_erp}
+          note={china_core.hs300_erp?.pe ? `PE-TTM ${china_core.hs300_erp.pe}` : '刷新快照后自动计算'}
+        />
       </div>
 
       {/* ========== 三、全球宏观 ========== */}
@@ -523,7 +551,15 @@ export default function Dashboard() {
       <div className="grid-4">
         <MetricCard title="DXY美元指数" value={fx_liquidity.dxy_idx?.value?.toFixed(2)} item={fx_liquidity.dxy_idx} />
         <MetricCard title="中美利差" value={cnUsSpread} unit="bp" item={fx_liquidity.cn_us_10y_spread} note="10年中债减10年美债" />
+        <MetricCard
+          title="美债10Y-2Y利差"
+          value={fx_liquidity.us_10y_2y_spread?.value != null ? Math.round(fx_liquidity.us_10y_2y_spread.value) : '--'}
+          unit="bp"
+          item={fx_liquidity.us_10y_2y_spread}
+        />
         <MetricCard title="USD/CNH" value={fx_liquidity.usd_cnh?.value?.toFixed(4)} item={fx_liquidity.usd_cnh} />
+      </div>
+      <div className="grid-4">
         <MetricCard title="USD/JPY" value={fx_liquidity.usd_jpy?.value?.toFixed(2)} item={fx_liquidity.usd_jpy} />
       </div>
 
@@ -563,6 +599,9 @@ export default function Dashboard() {
         <MetricCard title="TED利差" value={risk_monitor.ted_spread?.value?.toFixed(0)} unit="bp" item={risk_monitor.ted_spread} />
       </div>
       <VIXChart value={risk_monitor.vix?.value} />
+
+      {/* ========== 七、宏观事件日历 ========== */}
+      <MacroCalendar events={events} />
 
       {/* 底部 */}
       <div className="footer">
