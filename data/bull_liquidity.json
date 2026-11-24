@@ -1,6 +1,6 @@
 {
   "stage": "条件未齐",
-  "stage_detail": "尚未满足：剩余流动性走阔、宽松连续累积、政策工具点火、M1 见底回升、增量资金渠道、信贷回升且盈利跟上",
+  "stage_detail": "尚未满足：剩余流动性走阔、政策利率转入下行、宽松连续累积、政策工具点火、增量资金渠道、信贷回升且盈利跟上",
   "met_count": 2,
   "conditions": [
     {
@@ -9,17 +9,17 @@
       "name": "剩余流动性走阔",
       "status": "partial",
       "rule": "M2 同比减名义 GDP 同比为正，且高于三个月前",
-      "detail": "最新 1.20 个百分点（M2 7.20% − 名义GDP 6.00%），三个月前 2.11 个百分点。",
-      "value": 1.1959,
+      "detail": "最新 1.10 个百分点（M2 7.10% − 名义GDP 6.00%），三个月前 1.81 个百分点。",
+      "value": 1.0959,
       "unit": "pct"
     },
     {
       "id": 2,
       "group": "启动",
       "name": "政策利率转入下行",
-      "status": "met",
+      "status": "partial",
       "rule": "一年期 LPR 六个月下行，或 LPR 不再上调且 10 年国债收益率三个月下行至少 10bp",
-      "detail": "一年期 LPR 3.00% → 3.00%。10 年国债 1.68% → 1.58%。",
+      "detail": "一年期 LPR 3.00% → 3.00%。10 年国债 1.68% → 1.59%。",
       "value": 3.0,
       "unit": "%"
     },
@@ -39,7 +39,7 @@
       "name": "钱宽、实体未接住",
       "status": "met",
       "rule": "剩余流动性为正，且社融或信贷同比三个月升幅不超过 0.3 个百分点",
-      "detail": "新增人民币贷款12个月滚动同比。剩余流动性 1.20 个百分点（截至 2026-09-01），信贷同比三个月变化 -3.69 个百分点（截至 2026-10-01）。",
+      "detail": "新增人民币贷款12个月滚动同比。剩余流动性 1.10 个百分点（截至 2026-10-01），信贷同比三个月变化 -3.69 个百分点（截至 2026-10-01）。",
       "value": -3.6913,
       "unit": "pct"
     },
@@ -57,10 +57,10 @@
       "id": 6,
       "group": "进场",
       "name": "M1 见底回升",
-      "status": "unmet",
+      "status": "met",
       "rule": "M1 同比高于三个月前，并且高于此前六个月的低点",
-      "detail": "M1 同比 4.00% → 3.20%，区间低点 4.00%。",
-      "value": 3.2,
+      "detail": "M1 同比 4.00% → 4.40%，区间低点 3.20%。",
+      "value": 4.4,
       "unit": "%"
     },
     {
@@ -70,7 +70,7 @@
       "status": "unmet",
       "rule": "两融余额一个月上升",
       "detail": "两融余额没有上升。",
-      "value": 2143791038403.0,
+      "value": 1118933062961.0,
       "unit": ""
     },
     {
@@ -86,8 +86,8 @@
   ],
   "bear": {
     "stage": "条件未齐",
-    "stage_detail": "尚未满足：剩余流动性转紧、利率不再向下、宽松中断、钱紧、信用在掉、没有新的宽松",
-    "met_count": 3,
+    "stage_detail": "尚未满足：剩余流动性转紧、利率不再向下、宽松中断、钱紧、信用在掉、没有新的宽松、M1 见顶回落",
+    "met_count": 2,
     "conditions": [
       {
         "id": 1,
@@ -95,17 +95,17 @@
         "name": "剩余流动性转紧",
         "status": "partial",
         "rule": "M2 同比减名义 GDP 同比不高于 0；仍为正但低于三个月前，只算一半",
-        "detail": "最新 1.20 个百分点（M2 7.20% − 名义GDP 6.00%），三个月前 2.11 个百分点。",
-        "value": 1.1959,
+        "detail": "最新 1.10 个百分点（M2 7.10% − 名义GDP 6.00%），三个月前 1.81 个百分点。",
+        "value": 1.0959,
         "unit": "pct"
       },
       {
         "id": 2,
         "group": "退潮",
         "name": "利率不再向下",
-        "status": "unmet",
+        "status": "partial",
         "rule": "一年期 LPR 六个月上行，或 LPR 不再下调且 10 年国债三个月上行至少 10bp",
-        "detail": "一年期 LPR 3.00% → 3.00%。10 年国债 1.68% → 1.58%。",
+        "detail": "一年期 LPR 3.00% → 3.00%。10 年国债 1.68% → 1.59%。",
         "value": 3.0,
         "unit": "%"
       },
@@ -125,7 +125,7 @@
         "name": "钱紧、信用在掉",
         "status": "partial",
         "rule": "剩余流动性不高于 0，且信贷同比三个月下降超过 0.3 个百分点",
-        "detail": "新增人民币贷款12个月滚动同比。剩余流动性 1.20 个百分点（截至 2026-09-01），信贷同比三个月变化 -3.69 个百分点（截至 2026-10-01）。",
+        "detail": "新增人民币贷款12个月滚动同比。剩余流动性 1.10 个百分点（截至 2026-10-01），信贷同比三个月变化 -3.69 个百分点（截至 2026-10-01）。",
         "value": -3.6913,
         "unit": "pct"
       },
@@ -143,10 +143,10 @@
         "id": 6,
         "group": "离场",
         "name": "M1 见顶回落",
-        "status": "met",
+        "status": "unmet",
         "rule": "M1 同比低于三个月前，并且低于此前六个月的高点",
-        "detail": "M1 同比 4.00% → 3.20%，区间高点 5.50%。",
-        "value": 3.2,
+        "detail": "M1 同比 4.00% → 4.40%，区间高点 5.50%。",
+        "value": 4.4,
         "unit": "%"
       },
       {
@@ -155,8 +155,8 @@
         "name": "增量资金撤出",
         "status": "met",
         "rule": "两融余额一个月下降，或 GC001 不低于 3.0%（近5日均值不低于 2.5%）",
-        "detail": "两融余额 24434亿 → 21438亿；GC001 1.395%。",
-        "value": 1.395,
+        "detail": "两融余额 12374亿 → 11189亿；GC001 1.310%。",
+        "value": 1.31,
         "unit": ""
       },
       {
@@ -172,14 +172,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2018-10",
-      "bull_met": 2,
-      "bear_met": 2,
-      "bull_stage": "条件未齐",
-      "bear_stage": "条件未齐",
-      "hs300": null
-    },
     {
       "date": "2018-11",
       "bull_met": 2,
@@ -687,14 +679,14 @@
     {
       "date": "2024-02",
       "bull_met": 3,
-      "bear_met": 1,
+      "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "信用先缩",
       "hs300": null
     },
     {
       "date": "2024-03",
-      "bull_met": 3,
+      "bull_met": 4,
       "bear_met": 1,
       "bull_stage": "条件未齐",
       "bear_stage": "信用先缩",
@@ -703,14 +695,14 @@
     {
       "date": "2024-04",
       "bull_met": 3,
-      "bear_met": 1,
+      "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "信用先缩",
       "hs300": null
     },
     {
       "date": "2024-05",
-      "bull_met": 3,
+      "bull_met": 4,
       "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -719,7 +711,7 @@
     {
       "date": "2024-06",
       "bull_met": 3,
-      "bear_met": 2,
+      "bear_met": 3,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
@@ -727,7 +719,7 @@
     {
       "date": "2024-07",
       "bull_met": 3,
-      "bear_met": 2,
+      "bear_met": 3,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
@@ -735,14 +727,14 @@
     {
       "date": "2024-08",
       "bull_met": 3,
-      "bear_met": 2,
+      "bear_met": 3,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2024-09",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -750,23 +742,23 @@
     },
     {
       "date": "2024-10",
-      "bull_met": 5,
+      "bull_met": 6,
       "bear_met": 1,
-      "bull_stage": "条件未齐",
+      "bull_stage": "资金进场",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2024-11",
-      "bull_met": 5,
+      "bull_met": 6,
       "bear_met": 1,
-      "bull_stage": "条件未齐",
+      "bull_stage": "资金进场",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2024-12",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 1,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -775,14 +767,14 @@
     {
       "date": "2025-01",
       "bull_met": 4,
-      "bear_met": 1,
+      "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2025-02",
-      "bull_met": 3,
+      "bull_met": 4,
       "bear_met": 0,
       "bull_stage": "信用接棒",
       "bear_stage": "条件未齐",
@@ -790,7 +782,7 @@
     },
     {
       "date": "2025-03",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 0,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -799,14 +791,14 @@
     {
       "date": "2025-04",
       "bull_met": 5,
-      "bear_met": 0,
+      "bear_met": 1,
       "bull_stage": "主升条件",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2025-05",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 0,
       "bull_stage": "信用接棒",
       "bear_stage": "条件未齐",
@@ -814,7 +806,7 @@
     },
     {
       "date": "2025-06",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 0,
       "bull_stage": "信用接棒",
       "bear_stage": "条件未齐",
@@ -822,7 +814,7 @@
     },
     {
       "date": "2025-07",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 0,
       "bull_stage": "信用接棒",
       "bear_stage": "条件未齐",
@@ -830,7 +822,7 @@
     },
     {
       "date": "2025-08",
-      "bull_met": 5,
+      "bull_met": 6,
       "bear_met": 0,
       "bull_stage": "主升条件",
       "bear_stage": "条件未齐",
@@ -838,15 +830,15 @@
     },
     {
       "date": "2025-09",
-      "bull_met": 5,
+      "bull_met": 6,
       "bear_met": 0,
-      "bull_stage": "条件未齐",
+      "bull_stage": "资金进场",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2025-10",
-      "bull_met": 4,
+      "bull_met": 5,
       "bear_met": 0,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -855,14 +847,14 @@
     {
       "date": "2025-11",
       "bull_met": 2,
-      "bear_met": 1,
+      "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2025-12",
-      "bull_met": 0,
+      "bull_met": 1,
       "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -870,7 +862,7 @@
     },
     {
       "date": "2026-01",
-      "bull_met": 1,
+      "bull_met": 2,
       "bear_met": 1,
       "bull_stage": "信用接棒",
       "bear_stage": "条件未齐",
@@ -879,7 +871,7 @@
     {
       "date": "2026-02",
       "bull_met": 3,
-      "bear_met": 0,
+      "bear_met": 1,
       "bull_stage": "主升条件",
       "bear_stage": "条件未齐",
       "hs300": null
@@ -887,14 +879,14 @@
     {
       "date": "2026-03",
       "bull_met": 2,
-      "bear_met": 0,
+      "bear_met": 1,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2026-04",
-      "bull_met": 2,
+      "bull_met": 3,
       "bear_met": 0,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -902,7 +894,7 @@
     },
     {
       "date": "2026-05",
-      "bull_met": 1,
+      "bull_met": 2,
       "bear_met": 1,
       "bull_stage": "条件未齐",
       "bear_stage": "信用先缩",
@@ -910,7 +902,7 @@
     },
     {
       "date": "2026-06",
-      "bull_met": 1,
+      "bull_met": 2,
       "bear_met": 1,
       "bull_stage": "条件未齐",
       "bear_stage": "信用先缩",
@@ -919,14 +911,14 @@
     {
       "date": "2026-07",
       "bull_met": 1,
-      "bear_met": 2,
+      "bear_met": 3,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
     },
     {
       "date": "2026-08",
-      "bull_met": 1,
+      "bull_met": 2,
       "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
@@ -935,13 +927,21 @@
     {
       "date": "2026-09",
       "bull_met": 1,
+      "bear_met": 3,
+      "bull_stage": "条件未齐",
+      "bear_stage": "条件未齐",
+      "hs300": null
+    },
+    {
+      "date": "2026-10",
+      "bull_met": 2,
       "bear_met": 2,
       "bull_stage": "条件未齐",
       "bear_stage": "条件未齐",
       "hs300": null
     }
   ],
-  "updated_at": "2026-11-23T15:50:00",
+  "updated_at": "2026-11-24T11:03:34",
   "source": "国家统计局 / 中国货币网 / 中债 / 交易所",
   "notes": {
     "credit_name": "新增人民币贷款12个月滚动同比",
@@ -953,18 +953,18 @@
       "工业企业利润：国家统计局利润总额累计增长。",
       "存款准备金率：没有稳定的央行开放接口，仍用东方财富整理的调整记录。",
       "信贷：东方财富只有新增人民币贷款，没有社融存量同比。这里用新增贷款 12 个月滚动同比。",
-      "两融是上交所加深交所融资余额。"
+      "两融只有沪市，深市这次没有取到。"
     ],
     "earnings_note": ""
   },
   "latest": {
     "m2_yoy": {
-      "date": "2026-09",
-      "value": 7.2
+      "date": "2026-10",
+      "value": 7.1
     },
     "m1_yoy": {
-      "date": "2026-09",
-      "value": 3.2
+      "date": "2026-10",
+      "value": 4.4
     },
     "nominal_gdp_yoy": {
       "date": "2026-09",
@@ -979,8 +979,8 @@
       "value": 9.0
     },
     "cn_10y": {
-      "date": "2026-11-20",
-      "value": 1.5803
+      "date": "2026-11-24",
+      "value": 1.5853
     },
     "credit_yoy": {
       "date": "2026-10",
@@ -991,13 +991,13 @@
       "value": 15.5
     },
     "margin_balance": {
-      "date": "2026-11-20",
-      "value": 2143791038403.0
+      "date": "2026-11-23",
+      "value": 1118933062961.0
     },
     "north_money": null,
     "gc001": {
-      "date": "2026-11-20",
-      "value": 1.395
+      "date": "2026-11-24",
+      "value": 1.31
     }
   }
 }

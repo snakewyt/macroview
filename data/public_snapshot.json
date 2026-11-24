@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-20T21:17:47",
+  "updated_at": "2026-11-24T10:59:55",
   "china_core": {
     "cn_pmi_official": {
       "value": 49.3,
@@ -43,30 +43,35 @@
       "date_6m": "2026年04月份"
     },
     "cn_10y_yield": {
-      "value": 1.5755,
-      "date": "2026-11-19",
+      "value": 1.5861,
+      "date": "2026-11-23",
       "source": "东方财富"
     },
+    "hs300_pe": {
+      "value": 28.43,
+      "date": "2026-11-24",
+      "source": "乐咕乐股"
+    },
     "cn_repo_gc001": {
-      "value": 1.395,
-      "date": "2026-11-20",
+      "value": 1.31,
+      "date": "2026-11-24",
       "source": "上交所"
     }
   },
   "global_macro": {
     "us_10y_yield": {
-      "value": 5.04,
-      "date": "2026-11-19",
+      "value": 4.92,
+      "date": "2026-11-23",
       "source": "东方财富"
     },
     "us_2y_yield": {
-      "value": 4.76,
-      "date": "2026-11-19",
+      "value": 4.63,
+      "date": "2026-11-23",
       "source": "东方财富"
     },
     "on_rrp_balance": {
-      "value": 405000000.0,
-      "date": "2026-11-19",
+      "value": 350000000.0,
+      "date": "2026-11-23",
       "source": "纽约联储"
     },
     "us_core_pce_yy": {
@@ -100,8 +105,8 @@
   },
   "assets": {
     "us_10y_yield": {
-      "value": 5.04,
-      "date": "2026-11-19",
+      "value": 4.92,
+      "date": "2026-11-23",
       "source": "东方财富"
     },
     "spx": {
@@ -136,16 +141,21 @@
     },
     "btc_usd": null,
     "nasdaq": {
-      "value": 23879.2,
-      "date": "2026-11-20",
+      "value": 24089.56,
+      "date": "2026-11-24",
       "source": "新浪财经"
     }
   },
   "risk_monitor": {
     "vix": {
-      "value": 28.44,
-      "date": "2026-11-19",
+      "value": 26.62,
+      "date": "2026-11-23",
       "source": "芝加哥期权交易所"
+    },
+    "move_idx": {
+      "value": 100.91,
+      "date": "2026-11-23",
+      "source": "雅虎财经"
     },
     "cn_vix": {
       "value": 14.8,
@@ -153,19 +163,14 @@
       "source": "50ETF期权"
     },
     "hy_spread_oas": {
-      "value": 347.0,
-      "date": "2026-11-18",
+      "value": 376.0,
+      "date": "2026-11-20",
       "source": "ICE BofA"
     },
     "ted_spread": {
-      "value": -3.0,
-      "date": "2026-11-18",
-      "source": "美联储票据减国债"
-    },
-    "move_idx": {
-      "value": 102.21,
+      "value": 18.0,
       "date": "2026-11-20",
-      "source": "雅虎财经"
+      "source": "美联储票据减国债"
     }
   }
 }
