@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-25T09:54:02",
+  "updated_at": "2026-11-26T09:35:55",
   "china_core": {
     "cn_pmi_official": {
       "value": 49.3,
@@ -43,8 +43,8 @@
       "date_6m": "2026年04月份"
     },
     "cn_10y_yield": {
-      "value": 1.5853,
-      "date": "2026-11-24",
+      "value": 1.5914,
+      "date": "2026-11-25",
       "source": "东方财富"
     },
     "hs300_pe": {
@@ -53,30 +53,30 @@
       "source": "乐咕乐股"
     },
     "cn_repo_gc001": {
-      "value": 1.45,
-      "date": "2026-11-25",
+      "value": 1.385,
+      "date": "2026-11-26",
       "source": "上交所"
     }
   },
   "global_macro": {
     "us_10y_yield": {
-      "value": 4.91,
-      "date": "2026-11-24",
+      "value": 4.85,
+      "date": "2026-11-25",
       "source": "东方财富"
     },
     "us_2y_yield": {
-      "value": 4.63,
-      "date": "2026-11-24",
+      "value": 4.61,
+      "date": "2026-11-25",
       "source": "东方财富"
     },
     "on_rrp_balance": {
-      "value": 301000000.0,
-      "date": "2026-11-24",
+      "value": 300000000.0,
+      "date": "2026-11-25",
       "source": "纽约联储"
     },
     "us_core_pce_yy": {
-      "value": 3.1,
-      "date": "2026-09",
+      "value": 3.3,
+      "date": "2026-10",
       "source": "美国商务部"
     },
     "fed_balance_sheet": {
@@ -88,8 +88,8 @@
   },
   "fx_liquidity": {
     "dxy_idx": {
-      "value": 103.65,
-      "date": "2026-11-20",
+      "value": 103.71,
+      "date": "2026-11-26",
       "source": "东方财富"
     },
     "usd_cnh": {
@@ -105,33 +105,33 @@
   },
   "assets": {
     "us_10y_yield": {
-      "value": 4.91,
-      "date": "2026-11-24",
+      "value": 4.85,
+      "date": "2026-11-25",
       "source": "东方财富"
     },
     "spx": {
-      "value": 7175.83,
-      "date": "2026-11-20",
+      "value": 7182.78,
+      "date": "2026-11-26",
       "source": "东方财富"
     },
     "hs300": {
-      "value": 3954.57,
-      "date": "2026-11-20",
+      "value": 3900.55,
+      "date": "2026-11-26",
       "source": "东方财富"
     },
     "hsi": {
-      "value": 22410.8,
-      "date": "2026-11-20",
+      "value": 22226.88,
+      "date": "2026-11-26",
       "source": "东方财富"
     },
     "nk225": {
-      "value": 56436.65,
-      "date": "2026-11-20",
+      "value": 57499.16,
+      "date": "2026-11-26",
       "source": "东方财富"
     },
     "gold_spot": {
-      "value": 3574.3,
-      "date": "2026-11-20",
+      "value": 3598.9,
+      "date": "2026-11-26",
       "source": "东方财富"
     },
     "wti_oil": {
@@ -141,20 +141,20 @@
     },
     "btc_usd": null,
     "nasdaq": {
-      "value": 23733.54,
-      "date": "2026-11-25",
+      "value": 23585.8,
+      "date": "2026-11-26",
       "source": "新浪财经"
     }
   },
   "risk_monitor": {
     "vix": {
-      "value": 26.36,
-      "date": "2026-11-24",
+      "value": 28.29,
+      "date": "2026-11-25",
       "source": "芝加哥期权交易所"
     },
     "move_idx": {
-      "value": 98.84,
-      "date": "2026-11-24",
+      "value": 97.54,
+      "date": "2026-11-25",
       "source": "雅虎财经"
     },
     "cn_vix": {
@@ -163,8 +163,8 @@
       "source": "50ETF期权"
     },
     "hy_spread_oas": {
-      "value": 363.0,
-      "date": "2026-11-23",
+      "value": 372.0,
+      "date": "2026-11-24",
       "source": "ICE BofA"
     },
     "ted_spread": {
